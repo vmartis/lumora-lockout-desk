@@ -60,9 +60,20 @@ function fakeApi(): AdminApi {
   };
 }
 
-const app = (api = fakeApi()) => buildApp({ adminApi: api, tickets });
+// Every request in these tests is made by a logged-in agent (agent-042), like the real web app.
+function withSession(a: ReturnType<typeof buildApp>) {
+  const inject = a.inject.bind(a);
+  return Object.assign(a, {
+    inject: async (opts: Parameters<typeof inject>[0]) => {
+      await a.ready();
+      const session = a.jwt.sign({ agentId: "agent-042", name: "Test Agent" });
+      const o = typeof opts === "string" ? { url: opts } : opts;
+      return inject({ ...o, cookies: { session, ...(o as { cookies?: Record<string, string> }).cookies } });
+    },
+  });
+}
+const app = (api = fakeApi()) => withSession(buildApp({ adminApi: api, tickets, jwtSecret: "test-secret-test-secret-test-secret" }));
 const validUnlock = {
-  agentId: "agent-042",
   verification: "SMS_CHALLENGE",
   challengeId: "11111111-1111-4111-8111-111111111111",
   reason: "Camera did not find face; verified by SMS",
@@ -162,7 +173,7 @@ describe("POST /api/cases/:accountId/unlock", () => {
     const res = await (await withChallenge(api)).inject({ method: "POST", url: "/api/cases/LB-000001/unlock", payload: validUnlock });
     expect(res.statusCode).toBe(200);
     expect(res.json().status).toBe("ACTIVE");
-    expect(api.unlock).toHaveBeenCalledWith("LB-000001", validUnlock);
+    expect(api.unlock).toHaveBeenCalledWith("LB-000001", { agentId: "agent-042", ...validUnlock }); // agent from the session
   });
 
   it("refuses to unlock an ATTACK case (403) and never calls the Admin API", async () => {
@@ -175,7 +186,7 @@ describe("POST /api/cases/:accountId/unlock", () => {
 
   it.each([
     ["missing reason", { ...validUnlock, reason: "" }],
-    ["bad agent id", { ...validUnlock, agentId: "<script>" }],
+    ["agent id in the body (it must come from the login)", { ...validUnlock, agentId: "agent-999" }],
     ["unknown verification", { ...validUnlock, verification: "TRUST_ME" }],
     ["missing challenge", { ...validUnlock, challengeId: undefined }],
     ["extra field", { ...validUnlock, password: "x" }],
@@ -200,8 +211,8 @@ const emailTickets: Ticket[] = [
   ...tickets,
   { ticketId: "T5", createdAt: "2026-10-11T10:00:00Z", accountId: "LB-000005", channel: "email", status: "NEW", text: "help" },
 ];
-const emailApp = (api = fakeApi()) => buildApp({ adminApi: api, tickets: emailTickets });
-const videoUnlock = { agentId: "agent-042", verification: "VIDEO_CALL", reason: "Compared face with passport on video call" };
+const emailApp = (api = fakeApi()) => withSession(buildApp({ adminApi: api, tickets: emailTickets, jwtSecret: "test-secret-test-secret-test-secret" }));
+const videoUnlock = { verification: "VIDEO_CALL", reason: "Compared face with passport on video call" };
 
 describe("verification methods by ticket channel (S5)", () => {
   it("offers SMS, video call and branch for a phone ticket", async () => {
@@ -248,7 +259,7 @@ describe("verification methods by ticket channel (S5)", () => {
     const api = fakeApi();
     const res = await app(api).inject({ method: "POST", url: "/api/cases/LB-000001/unlock", payload: videoUnlock });
     expect(res.statusCode).toBe(200);
-    expect(api.unlock).toHaveBeenCalledWith("LB-000001", videoUnlock);
+    expect(api.unlock).toHaveBeenCalledWith("LB-000001", { agentId: "agent-042", ...videoUnlock });
   });
 
   it("rejects a VIDEO_CALL unlock that carries a challengeId (400)", async () => {
@@ -380,7 +391,7 @@ describe("queue refresh does not block the agent", () => {
       inFlight--;
       return locked(id);
     };
-    const res = await buildApp({ adminApi: api, tickets: many }).inject({ method: "GET", url: "/api/cases" });
+    const res = await withSession(buildApp({ adminApi: api, tickets: many, jwtSecret: "test-secret-test-secret-test-secret" })).inject({ method: "GET", url: "/api/cases" });
     expect(res.json()).toHaveLength(10);
     expect(maxInFlight).toBeLessThanOrEqual(2);
   });

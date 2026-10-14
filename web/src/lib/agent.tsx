@@ -1,35 +1,54 @@
-import { createContext, useContext, useState, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, type ReactNode } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { Button } from '@/components/ui/button'
+import { Skeleton } from '@/components/ui/skeleton'
+import { LoginPage } from '@/pages/LoginPage'
+import { api, ApiError, SESSION_ENDED } from '@/lib/api'
 
-// Agent ID is typed by the agent (no login in this environment, see PRODUCT_NOTE.md) and kept for the browser tab only.
-const KEY = 'lockout-desk.agentId'
-export const AGENT_ID_PATTERN = /^[A-Za-z0-9._-]{2,32}$/
-
-function read(): string {
-  try {
-    return sessionStorage.getItem(KEY) ?? ''
-  } catch {
-    return ''
-  }
-}
-
-type AgentState = { agentId: string; setAgentId: (v: string) => void; isValid: boolean }
+// The signed-in agent comes from the server session (httpOnly cookie); the browser never holds the token.
+type Session = { agentId: string; name: string }
+type AgentState = Session & { isValid: true; logout: () => Promise<void> }
 const AgentContext = createContext<AgentState | null>(null)
 
 export function AgentProvider({ children }: { children: ReactNode }) {
-  const [agentId, setState] = useState(read)
-  const setAgentId = (value: string) => {
-    setState(value)
+  const queryClient = useQueryClient()
+  const me = useQuery({ queryKey: ['me'], queryFn: () => api<Session>('/me'), retry: false })
+
+  // Any API call that comes back 401 (session expired) sends the agent back to the login page.
+  useEffect(() => {
+    const ended = () => queryClient.resetQueries({ queryKey: ['me'] })
+    window.addEventListener(SESSION_ENDED, ended)
+    return () => window.removeEventListener(SESSION_ENDED, ended)
+  }, [queryClient])
+
+  if (me.isPending) return <Skeleton className="m-6 h-40" />
+  if (me.isError) {
+    if (me.error instanceof ApiError && me.error.status === 401) return <LoginPage />
+    return (
+      <Alert variant="destructive" className="m-6 w-auto">
+        <AlertTitle>Could not reach the Lockout Desk server</AlertTitle>
+        <AlertDescription className="space-y-2">
+          <p>{me.error.message}</p>
+          <Button size="sm" variant="outline" onClick={() => me.refetch()}>
+            Try again
+          </Button>
+        </AlertDescription>
+      </Alert>
+    )
+  }
+
+  const logout = async () => {
     try {
-      sessionStorage.setItem(KEY, value)
+      await api('/logout', { method: 'POST', body: '{}' })
     } catch {
-      /* storage blocked: keep it in memory only */
+      /* even if the server call fails, forget everything on this screen */
+    } finally {
+      queryClient.clear()
+      await queryClient.resetQueries({ queryKey: ['me'] })
     }
   }
-  return (
-    <AgentContext.Provider value={{ agentId, setAgentId, isValid: AGENT_ID_PATTERN.test(agentId) }}>
-      {children}
-    </AgentContext.Provider>
-  )
+  return <AgentContext.Provider value={{ ...me.data, isValid: true, logout }}>{children}</AgentContext.Provider>
 }
 
 export function useAgentId(): AgentState {

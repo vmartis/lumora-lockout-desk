@@ -2,6 +2,8 @@ import Fastify, { type FastifyRequest } from "fastify";
 import fastifyHelmet from "@fastify/helmet";
 import fastifyStatic from "@fastify/static";
 import { AdminApiError, type AdminApi } from "./adminApi.js";
+import { randomBytes } from "node:crypto";
+import { registerAuth, type AgentAccount } from "./auth.js";
 import { createCaseStore } from "./cases.js";
 import { caseRoutes } from "./routes/cases.js";
 import { reasonRoutes } from "./routes/reasons.js";
@@ -11,6 +13,9 @@ import type { Ticket } from "./tickets.js";
 export interface AppDeps {
   adminApi: AdminApi;
   tickets?: Ticket[];
+  agents?: AgentAccount[];
+  /** Signs session tokens; without one a random secret is used (sessions end when the server restarts). */
+  jwtSecret?: string;
   staticDir?: string;
   logStream?: NodeJS.WritableStream;
 }
@@ -23,7 +28,7 @@ const logSerializers = {
 
 const PASS_THROUGH = new Set([404, 409, 410, 422]);
 
-export function buildApp({ adminApi, tickets = [], staticDir, logStream }: AppDeps) {
+export function buildApp({ adminApi, tickets = [], agents = [], jwtSecret, staticDir, logStream }: AppDeps) {
   const logging = logStream !== undefined || process.env.NODE_ENV === "production";
   const app = Fastify({
     logger: logging ? { serializers: logSerializers, ...(logStream ? { stream: logStream } : {}) } : false,
@@ -56,6 +61,8 @@ export function buildApp({ adminApi, tickets = [], staticDir, logStream }: AppDe
     req.log.error({ err: { type: (err as Error).name } }, "request failed");
     return reply.code(500).send({ error: "Something went wrong on our side." });
   });
+
+  registerAuth(app, agents, jwtSecret || randomBytes(32).toString("hex"));
 
   const store = createCaseStore(adminApi, tickets);
   caseRoutes(app, store, adminApi);

@@ -11,9 +11,8 @@ const SMS_NOT_ALLOWED = "SMS codes are only for customers who contacted us by ph
 const unlockBody = {
   type: "object",
   additionalProperties: false,
-  required: ["agentId", "verification", "reason"],
+  required: ["verification", "reason"], // the agent comes from the login session, never from the body
   properties: {
-    agentId: { type: "string", pattern: "^[A-Za-z0-9._-]{2,32}$" },
     verification: { type: "string", enum: ["SMS_CHALLENGE", "VIDEO_CALL", "BRANCH"] },
     challengeId: { type: "string", format: "uuid" },
     reason: { type: "string", minLength: 5, maxLength: 500 },
@@ -83,7 +82,7 @@ export function unlockRoutes(app: FastifyInstance, adminApi: AdminApi, store: Ca
     },
   );
 
-  app.post<{ Params: { accountId: string }; Body: UnlockRequest }>(
+  app.post<{ Params: { accountId: string }; Body: Omit<UnlockRequest, "agentId"> }>(
     "/api/cases/:accountId/unlock",
     { schema: { params: accountParams, body: unlockBody } },
     async (req, reply) => {
@@ -91,7 +90,8 @@ export function unlockRoutes(app: FastifyInstance, adminApi: AdminApi, store: Ca
       if (store.ticketsFor(accountId).length === 0) return reply.code(404).send({ error: "No open ticket for this account" });
       const { verdict } = await store.get(accountId);
       if (verdict.kind === "ATTACK") return reply.code(403).send({ error: ATTACK_REFUSAL });
-      const { agentId, verification, challengeId, reason } = req.body;
+      const { verification, challengeId, reason } = req.body;
+      const { agentId } = req.user; // from the signed session cookie
       if (!allowedVerifications(verdict, store.ticketsFor(accountId)).includes(verification)) {
         return reply.code(403).send({ error: verification === "SMS_CHALLENGE" ? SMS_NOT_ALLOWED : "This verification method is not allowed for this case" });
       }

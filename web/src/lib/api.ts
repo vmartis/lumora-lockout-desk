@@ -6,12 +6,16 @@ export class ApiError extends Error {
   }
 }
 
+/** Fired when the server says the session is gone (401), so the app shows the login page. */
+export const SESSION_ENDED = 'lockout-desk:session-ended'
+
 export async function api<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`/api${path}`, {
     ...init,
     headers: { ...(init?.body ? { 'Content-Type': 'application/json' } : {}), ...init?.headers },
   })
   const body = await res.json().catch(() => ({}))
+  if (res.status === 401 && path !== '/login' && path !== '/me') window.dispatchEvent(new Event(SESSION_ENDED))
   if (!res.ok) throw new ApiError(res.status, body.error ?? `Request failed (${res.status})`)
   return body as T
 }

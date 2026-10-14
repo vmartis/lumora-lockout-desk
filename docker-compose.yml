@@ -21,8 +21,12 @@ services:
       ADMIN_API_KEY: ${ADMIN_API_KEY:-local-dev-admin-key-change-me}
       ADMIN_API_URL: http://identity-admin-api:9100
       TICKETS_FILE: /data/support_tickets.csv
+      AGENTS_FILE: /config/agents.json
+      # Signs login sessions. Empty = a random secret per start (everyone logs in again after a restart).
+      JWT_SECRET: ${JWT_SECRET:-}
     volumes:
       - ./data/support_tickets.csv:/data/support_tickets.csv:ro
+      - ./config/agents.json:/config/agents.json:ro
     ports:
       - "127.0.0.1:8080:8080"
     depends_on:

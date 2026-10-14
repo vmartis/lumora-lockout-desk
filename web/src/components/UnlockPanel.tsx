@@ -5,7 +5,6 @@ import { z } from 'zod'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { CheckCircle2, MessageSquareText, LockOpen } from 'lucide-react'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -31,7 +30,7 @@ export function UnlockPanel({
   allowedVerifications: string[]
 }) {
   const queryClient = useQueryClient()
-  const { agentId, isValid: agentOk } = useAgentId()
+  const { isValid: agentOk } = useAgentId() // always true once logged in; the server takes the agent from the session
   const options = methodOptions(allowedVerifications)
   const [picked, setMethod] = useState<Verification | null>(options[0]?.value ?? null)
   // If the allowed methods change after a refetch, fall back to the first one still offered.
@@ -79,8 +78,8 @@ export function UnlockPanel({
         method: 'POST',
         body: JSON.stringify(
           method === 'SMS_CHALLENGE'
-            ? { agentId, verification: method, challengeId, reason }
-            : { agentId, verification: method, reason },
+            ? { verification: method, challengeId, reason }
+            : { verification: method, reason },
         ),
       }),
     onSuccess: () => {
@@ -184,12 +183,6 @@ export function UnlockPanel({
           />
           {unlockForm.formState.errors.reason && (
             <p className="text-sm text-destructive">{unlockForm.formState.errors.reason.message}</p>
-          )}
-          {!agentOk && (
-            <Alert>
-              <AlertTitle>Enter your agent ID</AlertTitle>
-              <AlertDescription>Type it in the header first. It is saved with the unlock.</AlertDescription>
-            </Alert>
           )}
           <Button
             type="submit"

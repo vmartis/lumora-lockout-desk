@@ -1,13 +1,12 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router'
-import { ShieldCheck } from 'lucide-react'
+import { LogOut, ShieldCheck, UserRound } from 'lucide-react'
 import { HealthBadge } from '@/components/HealthBadge'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import { Button } from '@/components/ui/button'
 import { useAgentId } from '@/lib/agent'
 
 export function AppShell({ children }: { children: ReactNode }) {
-  const { agentId, setAgentId, isValid } = useAgentId()
+  const { agentId, name, logout } = useAgentId()
   return (
     <div className="min-h-screen bg-muted/40">
       <header className="border-b bg-background">
@@ -20,19 +19,14 @@ export function AppShell({ children }: { children: ReactNode }) {
             </div>
           </Link>
           <HealthBadge />
-          <div className="flex items-center gap-2">
-            <Label htmlFor="agent-id" className="text-sm text-muted-foreground">
-              Agent ID
-            </Label>
-            <Input
-              id="agent-id"
-              value={agentId}
-              onChange={(e) => setAgentId(e.target.value.trim())}
-              placeholder="e.g. agent-042"
-              maxLength={32}
-              aria-invalid={agentId !== '' && !isValid}
-              className="h-8 w-36"
-            />
+          <div className="flex items-center gap-2 text-sm">
+            <UserRound className="size-4 text-muted-foreground" aria-hidden />
+            <span>
+              {name} <span className="text-muted-foreground">({agentId})</span>
+            </span>
+            <Button variant="ghost" size="sm" onClick={() => logout()}>
+              <LogOut aria-hidden /> Log out
+            </Button>
           </div>
         </div>
       </header>

@@ -1,0 +1,14 @@
+[
+  {
+    "username": "jana",
+    "agentId": "agent-042",
+    "name": "Jana Kovac",
+    "passwordHash": "scrypt:c866a8fed684e3a282f477390f983a5d:2ca4e7359b5c1cc1e9de068e597455b803e9863f7479c198fdcdb52d3ea984e7"
+  },
+  {
+    "username": "peter",
+    "agentId": "agent-007",
+    "name": "Peter Horvat",
+    "passwordHash": "scrypt:7791946b97c8c995b3342a5d62a85595:7cde5b04ae395bbe7777a6f8bdc3d774f362d02b63ed57dfbd4c55867c0ea130"
+  }
+]
