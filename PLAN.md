@@ -33,6 +33,10 @@ Parallel saves: about 15 min (W1 splits server vs web, W2 splits unlock vs queue
 | 5 | N5 | Attempts table highlights the suspicious fields (device, country, liveness) per row | Verdict reasons already list them | S3 | CasePage.tsx, components/AttemptsTable.tsx | 15 | |
 | 6 | N6 | Biometric reset after VIDEO_CALL or BRANCH (omitted in note – needs my OK) | Rarer, stricter path | S5 | routes/unlock.ts, VerifyPanel.tsx | 15 | |
 | 7 | N7 | Small summary for the lead: lockouts by cause and app version (omitted in note – needs my OK) | Doesn't shorten a customer's wait | S3 | new route + page | 15 | |
+| 8 | N8 | Agent logs in with username + password; the agent ID in the audit comes from the login, not a typed field (omitted in note – needs my OK) | Note omits agent login; no user store in the environment, so agents are seeded in a config file (hashed passwords, scrypt) and the session is a JWT via @fastify/jwt | S2 | server auth plugin + all /api routes, LoginPage.tsx, AppShell.tsx, docker-compose.yml (secret) | 20 | |
+| 9 | N9 | Agent sees a read-only profile page (name, agent ID) (omitted in note – needs my OK) | Only useful once N8 exists | N8 | routes/me.ts, ProfilePage.tsx | 10 | |
+| 10 | N10 | Agent changes their password (omitted in note – needs my OK) | Needs a writable user store; without a database the change is lost on restart unless a data volume is added | N8 | routes/me.ts, ProfilePage.tsx, docker-compose.yml (volume) | 15 | |
+| 11 | N11 | Agent signs in with the bank's SSO (omitted in note – needs my OK; **blocked**: no identity provider in this environment, so it cannot be built or tested here) | Needs an SSO provider (OIDC) to connect to | N8 | auth plugin, LoginPage.tsx | – | |
 
 Rule: an N-item starts only when the whole MVP table is ticked, there are no open fixes in FRICTION.md with higher value, and there are at least (item minutes + 10) minutes left before +2:35 (22:06).
 
