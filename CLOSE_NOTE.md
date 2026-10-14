@@ -1,13 +1,13 @@
 # WHAT A USER CAN DO NOW
 A Customer Care agent opens http://localhost:8080, signs in, and works through locked-out customers in one place:
 - **Sign in** with a username and password. The name in the header opens a read-only profile (name, agent ID, session end), and **Log out** is next to it.
-- **See the queue:** every locked customer with an open ticket (46 right now), longest wait first, with waiting time in plain words ("3 d 2 h"), ticket channels, counts at the top and attack cases in red.
+- **See the queue:** every locked customer with an open ticket (47 right now), longest wait first, with waiting time in plain words ("3 d 2 h"), ticket channels, counts at the top and attack cases in red.
 - **Find a customer:** type part of a name (any case, with or without accents) or a customer number ("83", "LB-000083"). The filter stays when going back from a case.
 - **Open a case** and get a plain-English verdict, "camera / light problem" or "looks like an attack", with the reasons (failed liveness, untrusted device, other country). Login attempts are in real time order, and suspicious fields are red. An "App out of date" flag shows customers on an old app.
 - **Verify and unlock:** SMS code for phone or chat customers, or a recorded video call or branch visit for any channel. Every unlock needs a reason, and the 3 most used reasons can be clicked, with the rest in a "More reasons" list. The unlock is recorded under the signed-in agent and shows in the case's **Account history**.
 - **Never unlock an attack:** the tool blocks it and gives an internal **Escalation to the Fraud team** text to copy.
 - **Tell the customer what happened:** copy a ready-made message, either camera tips that lead with "update the app", or a neutral "we are protecting your account".
-- **See the big picture** on **Summary**: 46 waiting (7 attacks), and **app 4.2.0: 87% of face logins fail, 38 of 39 camera-problem customers are on it.**
+- **See the big picture** on **Summary**: 47 waiting (7 attacks), and **app 4.2.0: 87% of face logins fail, 39 of 40 camera-problem customers are on it.**
 
 # WHAT I CHANGED AFTER TRYING IT MYSELF
 - **Reason suggestions:** before, every saved and team reason was shown as a chip, so the row got long and hard to scan. After, only the 3 most used are chips and the rest are in a "More reasons (n)…" dropdown. The agent picks a reason in one click instead of reading a wall of chips.
