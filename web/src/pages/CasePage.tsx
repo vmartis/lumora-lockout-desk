@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link, useParams } from 'react-router'
 import { ArrowLeft, ShieldAlert, CheckCircle2 } from 'lucide-react'
+import { CustomerMessage } from '@/components/CustomerMessage'
 import { RiskBadge } from '@/components/RiskBadge'
 import { UnlockPanel } from '@/components/UnlockPanel'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
@@ -78,6 +79,8 @@ export function CasePage() {
           ) : (
             <UnlockPanel accountId={data.account.accountId} phone={data.account.registeredPhone} />
           )}
+
+          <CustomerMessage detail={data} />
 
           <Card>
             <CardHeader>
