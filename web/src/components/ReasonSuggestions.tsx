@@ -5,7 +5,9 @@ import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { api } from '@/lib/api'
+import { splitReasons } from '@/lib/reasonList'
 import { loadReasons, saveReason } from '@/lib/savedReasons'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 type Top = { text: string; count: number; verification: string }[]
 
@@ -21,9 +23,10 @@ export function ReasonSuggestions({
 }) {
   const [saved, setSaved] = useState(() => loadReasons())
   const { data: top = [] } = useQuery({ queryKey: ['reasons-top'], queryFn: () => api<Top>('/reasons/top') })
-  const savedSet = new Set(saved.map((r) => r.toLowerCase()))
   // Only wording the team used with the same verification method, so an SMS reason is never offered for a branch visit.
-  const team = top.filter((t) => t.verification === method && !savedSet.has(t.text.toLowerCase()))
+  const team = top.filter((t) => t.verification === method)
+  // Friction fix: only the 3 most used as chips; everything else in a dropdown so the row stays short.
+  const { chips, more } = splitReasons(saved, team, 3)
 
   const save = () => {
     if (saveReason(current)) {
@@ -50,10 +53,27 @@ export function ReasonSuggestions({
 
   return (
     <div className="space-y-1.5">
-      {(saved.length > 0 || team.length > 0) && (
-        <div className="flex flex-wrap gap-1.5" aria-label="Reason suggestions">
-          {saved.map((r) => chip(r, <Bookmark aria-hidden />, `Your saved reason – click to use, then edit:\n${r}`))}
-          {team.map((t) => chip(t.text, <Users aria-hidden />, `Used for ${t.count} customers by the team – click to use, then edit:\n${t.text}`))}
+      {chips.length > 0 && (
+        <div className="flex flex-wrap items-center gap-1.5" aria-label="Most used reasons">
+          {chips.map((c) =>
+            c.source === 'team'
+              ? chip(c.text, <Users aria-hidden />, `Used for ${c.count} customers by the team – click to use, then edit:\n${c.text}`)
+              : chip(c.text, <Bookmark aria-hidden />, `Your saved reason – click to use, then edit:\n${c.text}`),
+          )}
+          {more.length > 0 && (
+            <Select value="" onValueChange={(text) => onPick(text)}>
+              <SelectTrigger size="sm" className="h-6 w-auto text-xs" aria-label="More reasons">
+                <SelectValue placeholder={`More reasons (${more.length})…`} />
+              </SelectTrigger>
+              <SelectContent className="max-w-md">
+                {more.map((m) => (
+                  <SelectItem key={m.text} value={m.text} title={m.text}>
+                    <span className="truncate">{m.source === 'team' ? '👥 ' : '🔖 '}{m.text}</span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         </div>
       )}
       <Button type="button" variant="ghost" size="sm" onClick={save}>
