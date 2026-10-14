@@ -1,6 +1,6 @@
 # Plan – Lockout Desk (start 19:31 · workflow live by 21:01 · N-items stop 22:06 · close 22:31)
 
-Now: – · Next: try it yourself + FRICTION.md, then N8 agent login (needs your OK) · Elapsed: 1:39
+Now: N5 (started 21:14) · Next: try it yourself + FRICTION.md, then N8 (needs your OK) · Elapsed: 1:43
 
 **Contract (fixed in S1):** backend Node + TypeScript + Fastify (`server/`), React SPA (`web/`), one Docker image on :8080, tests with vitest.
 - `GET /api/health` → `{status}`
@@ -30,7 +30,7 @@ Parallel saves: about 15 min (W1 splits server vs web, W2 splits unlock vs queue
 | 1 | N1 | Case flags old app version (4.2.0 has most camera failures) and the message says "update the app" | Nice-to-have hint, not needed for a correct decision | S3, S4 | server/src/appVersion.ts, routes/cases.ts, messages.ts, CasePage.tsx | 10 | ✓ |
 | 2 | N2 | Agent finds a case by account ID or customer number (queue filter + "Open case" for callers not in the queue; server still requires an open ticket) | Queue covers all current tickets | S2 | web/src/lib/filter.ts, QueuePage.tsx | 10 | ✓ |
 | 3 | N3 | After unlock the case shows the audit entry (who, how, why) and leaves the queue | Unlock already works; this is confirmation | S5 | adminApi.ts, routes/cases.ts, CasePage.tsx | 10 | ✓ |
-| 4 | N4 | Agent copies a short Fraud escalation summary (account, evidence) for an attack case | Escalation is already shown; there is no Fraud system to send it to | S3 | messages.ts, CustomerMessage.tsx | 10 | |
+| 4 | N4 | Agent copies a short Fraud escalation summary (account, evidence) for an attack case | Escalation is already shown; there is no Fraud system to send it to | S3 | web/src/lib/fraud.ts, CopyTextCard.tsx, FraudEscalation.tsx, CasePage.tsx | 10 | ✓ |
 | 5 | N5 | Attempts table highlights the suspicious fields (device, country, liveness) per row | Verdict reasons already list them | S3 | CasePage.tsx, components/AttemptsTable.tsx | 15 | |
 | 6 | N6 | Biometric reset after VIDEO_CALL or BRANCH (omitted in note – needs my OK) | Rarer, stricter path | S5 | routes/unlock.ts, VerifyPanel.tsx | 15 | ✓ |
 | 7 | N7 | Small summary for the lead: lockouts by cause and app version (omitted in note – needs my OK) | Doesn't shorten a customer's wait | S3 | new route + page | 15 | |

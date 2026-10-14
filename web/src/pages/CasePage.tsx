@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Link, useLocation, useParams } from 'react-router'
 import { ArrowLeft, ShieldAlert, CheckCircle2 } from 'lucide-react'
 import { CustomerMessage } from '@/components/CustomerMessage'
+import { FraudEscalation } from '@/components/FraudEscalation'
 import { RiskBadge } from '@/components/RiskBadge'
 import { UnlockPanel } from '@/components/UnlockPanel'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
@@ -130,6 +131,7 @@ export function CasePage() {
             />
           )}
 
+          {data.verdict.kind === 'ATTACK' && data.account.status === 'LOCKED' && <FraudEscalation detail={data} />}
           <CustomerMessage detail={data} />
 
           <Card>
