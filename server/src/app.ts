@@ -4,6 +4,7 @@ import fastifyStatic from "@fastify/static";
 import { AdminApiError, type AdminApi } from "./adminApi.js";
 import { createCaseStore } from "./cases.js";
 import { caseRoutes } from "./routes/cases.js";
+import { reasonRoutes } from "./routes/reasons.js";
 import { unlockRoutes } from "./routes/unlock.js";
 import type { Ticket } from "./tickets.js";
 
@@ -58,6 +59,7 @@ export function buildApp({ adminApi, tickets = [], staticDir, logStream }: AppDe
 
   const store = createCaseStore(adminApi, tickets);
   caseRoutes(app, store, adminApi);
+  reasonRoutes(app, adminApi);
   unlockRoutes(app, adminApi, store);
 
   app.get("/api/health", async () => {

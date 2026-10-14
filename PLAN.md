@@ -1,6 +1,6 @@
 # Plan – Lockout Desk (start 19:31 · workflow live by 21:01 · N-items stop 22:06 · close 22:31)
 
-Now: – · Next: try it yourself + FRICTION.md; N8 agent login needs your OK · Elapsed: 1:46
+Now: – · Next: try it yourself + FRICTION.md, then /wrap-up from ~22:05; N8 needs your OK · Elapsed: 1:53
 
 **Contract (fixed in S1):** backend Node + TypeScript + Fastify (`server/`), React SPA (`web/`), one Docker image on :8080, tests with vitest.
 - `GET /api/health` → `{status}`
@@ -32,7 +32,7 @@ Parallel saves: about 15 min (W1 splits server vs web, W2 splits unlock vs queue
 | 3 | N3 | After unlock the case shows the audit entry (who, how, why) and leaves the queue | Unlock already works; this is confirmation | S5 | adminApi.ts, routes/cases.ts, CasePage.tsx | 10 | ✓ |
 | 4 | N4 | Agent copies a short Fraud escalation summary (account, evidence) for an attack case | Escalation is already shown; there is no Fraud system to send it to | S3 | web/src/lib/fraud.ts, CopyTextCard.tsx, FraudEscalation.tsx, CasePage.tsx | 10 | ✓ |
 | 5 | N5 | Attempts table highlights the suspicious fields (device, country, liveness) per row | Verdict reasons already list them | S3 | server/src/verdict.ts (attemptFlags), routes/cases.ts, components/AttemptsTable.tsx, CasePage.tsx | 15 | ✓ |
-| 6 | N14 | When unlocking, the agent picks a reason from the team's most used reasons (read from the Admin API audit log) or from reasons they saved earlier ("Save reason" keeps it in this browser), then can still edit it | Typing a reason works; risk: canned reasons become less specific (policy rule 6 wants the real reason), so the text stays editable and starts empty | N3, S5 | routes/cases.ts or new routes/reasons.ts (top reasons from audit), UnlockPanel.tsx, web/src/lib/savedReasons.ts | 15 | |
+| 6 | N14 | When unlocking, the agent picks a reason from the team's most used reasons (read from the Admin API audit log) or from reasons they saved earlier ("Save reason" keeps it in this browser), then can still edit it | Typing a reason works; risk: canned reasons become less specific (policy rule 6 wants the real reason), so the text stays editable and starts empty | N3, S5 | server/src/reasons.ts, routes/reasons.ts, ReasonSuggestions.tsx, UnlockPanel.tsx, web/src/lib/savedReasons.ts | 15 | ✓ |
 | 7 | N6 | Biometric reset after VIDEO_CALL or BRANCH (omitted in note – needs my OK) | Rarer, stricter path | S5 | routes/unlock.ts, VerifyPanel.tsx | 15 | ✓ |
 | 8 | N7 | Small summary for the lead: lockouts by cause and app version (omitted in note – needs my OK) | Doesn't shorten a customer's wait | S3 | new route + page | 15 | |
 | 9 | N8 | Agent logs in with username + password; the agent ID in the audit comes from the login, not a typed field (omitted in note – needs my OK) | Note omits agent login; no user store in the environment, so agents are seeded in a config file (hashed passwords, scrypt) and the session is a JWT via @fastify/jwt | S2 | server auth plugin + all /api routes, LoginPage.tsx, AppShell.tsx, docker-compose.yml (secret) | 20 | |

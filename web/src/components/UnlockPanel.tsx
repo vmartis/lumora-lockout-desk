@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Textarea } from '@/components/ui/textarea'
+import { ReasonSuggestions } from '@/components/ReasonSuggestions'
 import { useAgentId } from '@/lib/agent'
 import { api } from '@/lib/api'
 import { canUnlock, methodOptions, SMS_NOT_ALLOWED_NOTE, type Verification } from './verificationMethods'
@@ -175,6 +176,11 @@ export function UnlockPanel({
             maxLength={500}
             placeholder={chosen?.reasonExample}
             {...unlockForm.register('reason')}
+          />
+          <ReasonSuggestions
+            current={unlockForm.watch('reason')}
+            method={method}
+            onPick={(text) => unlockForm.setValue('reason', text, { shouldValidate: true })}
           />
           {unlockForm.formState.errors.reason && (
             <p className="text-sm text-destructive">{unlockForm.formState.errors.reason.message}</p>

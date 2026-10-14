@@ -487,3 +487,21 @@ describe("attempt flags through the API (N5)", () => {
     expect(res.json().attempts[0].flags).toEqual(["liveness"]);
   });
 });
+
+describe("GET /api/reasons/top (N14)", () => {
+  it("returns the most used unlock reasons from the audit log", async () => {
+    const api = fakeApi();
+    api.getAudit = async () => [1, 2].map((i) => ({ action: "UNLOCK", accountId: `LB-00000${i}`, agentId: `agent-${i}`, verification: "BRANCH", reason: "Seen at branch with ID", at: "x" }));
+    const res = await app(api).inject({ method: "GET", url: "/api/reasons/top" });
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toEqual([{ text: "Seen at branch with ID", count: 2, verification: "BRANCH" }]);
+  });
+
+  it("returns an empty list when the audit cannot be read", async () => {
+    const api = fakeApi();
+    api.getAudit = async () => { throw new AdminApiError(502, "down"); };
+    const res = await app(api).inject({ method: "GET", url: "/api/reasons/top" });
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toEqual([]);
+  });
+});
