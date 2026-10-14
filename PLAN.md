@@ -1,6 +1,6 @@
 # Plan – Lockout Desk (start 19:31 · workflow live by 21:01 · N-items stop 22:06 · close 22:31)
 
-Now: – · Next: S3 S4 (wave W1) · Elapsed: 0:43
+Now: S3 S4 (started 20:17) · Next: S5 S6 (wave W2) · Elapsed: 0:46
 
 **Contract (fixed in S1):** backend Node + TypeScript + Fastify (`server/`), React SPA (`web/`), one Docker image on :8080, tests with vitest.
 - `GET /api/health` → `{status}`
@@ -19,8 +19,9 @@ Now: – · Next: S3 S4 (wave W1) · Elapsed: 0:43
 | S4 | W1 | Agent copies a ready-made customer message: "how to avoid it" tips for a fumble, "we are protecting your account" for an attack | S2 | web/src/lib/messages.ts, components/CustomerMessage.tsx, CasePage mount (web only) | Unit test for both messages; copy button puts the text on the clipboard on the deployed app | 15 | |
 | S5 | W2 | Agent picks a verification allowed for the ticket's channel: SMS for phone/chat, or records a video call / branch visit for any channel | S3 | routes/unlock.ts, components/VerifyPanel.tsx | Tests: SMS refused for email-only case, VIDEO_CALL accepted; on deploy an email-ticket case unlocks with BRANCH and a reason | 15 | |
 | S6 | W2 | Queue is easy to work: sorted by waiting time, risk badges, ticket count + channels, skeleton/empty/error states | S3 | routes/cases.ts (list), QueuePage.tsx | Test: sort order and risk on list; on deploy oldest case is first and attack cases show a red badge | 10 | |
+| S7 | W3 | Agent types part of a customer name and the queue shows only matching customers (ignores case and accents, e.g. "proch" finds "Procházka") | S6 | QueuePage.tsx, web/src/lib/filter.ts (client-side, no server change) | Unit test: case/accent-insensitive match, empty filter shows all; on deploy typing a name narrows the table and "no match" shows a friendly empty state | 10 | |
 
-Total ≈ 105 min → MVP done ≈ 21:45 if on time; S1 + S2 live ≈ 20:40 (milestone 21:01).
+Total ≈ 115 min (S7 added) → MVP done ≈ 21:50 if on time; S1 + S2 live ≈ 20:40 (milestone 21:01).
 Parallel saves: about 15 min (W1 splits server vs web, W2 splits unlock vs queue; minus ~5 min merge per wave).
 
 ## If time allows (after MVP)
