@@ -85,6 +85,26 @@ describe("GET /api/cases/:accountId", () => {
     expect(body.verdict.kind).toBe("FUMBLE");
   });
 
+  it("returns attempts newest first by real time, with ISO UTC timestamps, unparseable last", async () => {
+    const api = fakeApi();
+    // Admin API order is file order reversed, which is not time order.
+    api.getAttempts = async () => [
+      fail({ attempt_id: "A3", timestamp: "2026-10-12T05:00:00Z" }),
+      fail({ attempt_id: "A9", timestamp: "garbled" }),
+      fail({ attempt_id: "A2", timestamp: "12.10.2026 08:03:17 CEST", device_id: " dev-1 ", ip_country: "sk" }),
+      fail({ attempt_id: "A1", timestamp: "2026-10-13T18:55:01Z" }),
+    ];
+    const res = await app(api).inject({ method: "GET", url: "/api/cases/LB-000001" });
+    expect(res.statusCode).toBe(200);
+    const body = res.json();
+    expect(body.attempts.map((a: { attemptId: string }) => a.attemptId)).toEqual(["A1", "A2", "A3", "A9"]);
+    expect(body.attempts[1]).toMatchObject({ timestamp: "2026-10-12T06:03:17Z", deviceTrusted: true, country: "SK" });
+    expect(Object.keys(body.attempts[0]).sort()).toEqual(
+      ["attemptId", "timestamp", "deviceModel", "deviceTrusted", "appVersion", "country", "livenessScore", "matchScore", "result", "failReason"].sort(),
+    );
+    expect(body.verdict.kind).toBe("FUMBLE");
+  });
+
   it("rejects malformed account ids with 400", async () => {
     const res = await app().inject({ method: "GET", url: "/api/cases/../../audit" });
     expect([400, 404]).toContain(res.statusCode);

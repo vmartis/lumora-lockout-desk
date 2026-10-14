@@ -1,6 +1,7 @@
 import type { Account, AdminApi } from "./adminApi.js";
 import type { Ticket } from "./tickets.js";
 import { decideVerdict, type Attempt, type Verdict } from "./verdict.js";
+import { normalizeAttempt, normalizeCountry, normalizeDeviceId, sortNewestFirst } from "./normalize.js";
 
 export interface CaseData {
   account: Account;
@@ -34,7 +35,10 @@ export function createCaseStore(adminApi: AdminApi, tickets: Ticket[]) {
   const queueLane = limiter(QUEUE_CONCURRENCY);
 
   async function load(accountId: string): Promise<CaseData> {
-    const [account, attempts] = await Promise.all([adminApi.getAccount(accountId), adminApi.getAttempts(accountId)]);
+    const [raw, rawAttempts] = await Promise.all([adminApi.getAccount(accountId), adminApi.getAttempts(accountId)]);
+    // Clean the data once here, so the verdict and the case page see the same values.
+    const account = { ...raw, country: normalizeCountry(raw.country), trustedDeviceId: normalizeDeviceId(raw.trustedDeviceId) };
+    const attempts = sortNewestFirst(rawAttempts.map(normalizeAttempt));
     return { account, attempts, verdict: decideVerdict(account, attempts) };
   }
 
