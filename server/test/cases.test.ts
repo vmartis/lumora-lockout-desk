@@ -516,3 +516,12 @@ describe("GET /api/reasons/top (N14)", () => {
     expect(res.json()).toEqual([]);
   });
 });
+
+describe("GET /api/summary (N7)", () => {
+  it("summarises the locked customers in the queue without personal data", async () => {
+    const res = await app().inject({ method: "GET", url: "/api/summary" });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().waiting).toEqual({ total: 2, attacks: 1, camera: 1 });
+    expect(res.body).not.toMatch(/Test Person|LB-0000/);
+  });
+});

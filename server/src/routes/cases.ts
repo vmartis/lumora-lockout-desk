@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import type { AdminApi } from "../adminApi.js";
 import { appUpdate } from "../appVersion.js";
 import { attemptFlags } from "../verdict.js";
+import { summarize } from "../summary.js";
 import type { CaseStore } from "../cases.js";
 import { allowedVerifications } from "../verification.js";
 
@@ -23,6 +24,7 @@ function auditFor(all: unknown, accountId: string) {
 
 export function caseRoutes(app: FastifyInstance, store: CaseStore, adminApi: AdminApi) {
   app.get("/api/cases", async () => store.list());
+  app.get("/api/summary", async () => summarize(await store.queueCases()));
 
   app.get<{ Params: { accountId: string } }>("/api/cases/:accountId", { schema: { params: accountParams } }, async (req, reply) => {
     const { accountId } = req.params;

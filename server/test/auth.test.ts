@@ -86,7 +86,7 @@ describe("login", () => {
 });
 
 describe("every API call needs a session", () => {
-  it.each(["/api/cases", "/api/cases/LB-000001", "/api/reasons/top", "/api/me"])("GET %s without session → 401", async (url) => {
+  it.each(["/api/cases", "/api/cases/LB-000001", "/api/reasons/top", "/api/me", "/api/summary"])("GET %s without session → 401", async (url) => {
     const res = await app().inject({ method: "GET", url });
     expect(res.statusCode).toBe(401);
   });

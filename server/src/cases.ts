@@ -95,9 +95,17 @@ export function createCaseStore(adminApi: AdminApi, tickets: Ticket[]) {
     return rows.filter((r) => r !== null).sort((a, b) => a.waitingSince.localeCompare(b.waitingSince));
   }
 
+  /** Case data of every locked customer in the queue (for the lead summary). */
+  async function queueCases(): Promise<CaseData[]> {
+    const ids = [...new Set(tickets.map((t) => t.accountId))];
+    const all = await Promise.all(ids.map((id) => getForQueue(id).catch(() => null)));
+    return all.filter((c): c is CaseData => c !== null && c.account.status === "LOCKED");
+  }
+
   return {
     get,
     list,
+    queueCases,
     ticketsFor: (accountId: string) => tickets.filter((t) => t.accountId === accountId),
     forget: (accountId: string) => cache.delete(accountId),
   };

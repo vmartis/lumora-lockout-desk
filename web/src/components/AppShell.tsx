@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router'
-import { LogOut, ShieldCheck, UserRound } from 'lucide-react'
+import { ChartBar, LogOut, ShieldCheck, UserRound } from 'lucide-react'
 import { HealthBadge } from '@/components/HealthBadge'
 import { Button } from '@/components/ui/button'
 import { useAgentId } from '@/lib/agent'
@@ -18,6 +18,11 @@ export function AppShell({ children }: { children: ReactNode }) {
               <p className="text-xs text-muted-foreground">Lumora Bank · Customer Care</p>
             </div>
           </Link>
+          <Button variant="ghost" size="sm" asChild>
+            <Link to="/summary">
+              <ChartBar aria-hidden /> Summary
+            </Link>
+          </Button>
           <HealthBadge />
           <div className="flex items-center gap-2 text-sm">
             <Link to="/profile" className="flex items-center gap-2 hover:underline" title="Your profile">
