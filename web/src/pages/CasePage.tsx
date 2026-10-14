@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link, useLocation, useParams } from 'react-router'
 import { ArrowLeft, ShieldAlert, CheckCircle2 } from 'lucide-react'
+import { AttemptsTable } from '@/components/AttemptsTable'
 import { CustomerMessage } from '@/components/CustomerMessage'
 import { FraudEscalation } from '@/components/FraudEscalation'
 import { RiskBadge } from '@/components/RiskBadge'
@@ -10,7 +11,6 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { api, formatTime, type AuditEntry, type CaseDetail } from '@/lib/api'
 
 const METHOD_WORDS: Record<string, string> = {
@@ -154,35 +154,10 @@ export function CasePage() {
           <Card>
             <CardHeader>
               <CardTitle>Login attempts</CardTitle>
-              <CardDescription>Most recent first, up to 50.</CardDescription>
+              <CardDescription>Most recent first, up to 50. Red cells look suspicious under the unlock rules.</CardDescription>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Time</TableHead>
-                    <TableHead>Result</TableHead>
-                    <TableHead>Device</TableHead>
-                    <TableHead>Country</TableHead>
-                    <TableHead>Liveness</TableHead>
-                    <TableHead>App</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {data.attempts.map((a) => (
-                    <TableRow key={a.attemptId}>
-                      <TableCell className="whitespace-nowrap">{a.timestamp}</TableCell>
-                      <TableCell>{a.result === 'SUCCESS' ? 'Success' : a.failReason || 'Fail'}</TableCell>
-                      <TableCell>
-                        {a.deviceModel} {a.deviceTrusted ? '' : <Badge variant="destructive">untrusted</Badge>}
-                      </TableCell>
-                      <TableCell>{a.country}</TableCell>
-                      <TableCell>{a.livenessScore}</TableCell>
-                      <TableCell>{a.appVersion}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+              <AttemptsTable attempts={data.attempts} />
             </CardContent>
           </Card>
         </>

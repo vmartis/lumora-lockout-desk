@@ -42,6 +42,36 @@ function latest(group: Attempt[]): string {
   return times.length ? `latest ${times[times.length - 1]}` : "time unknown";
 }
 
+// One rule per attack signal, shared by the verdict and the per-attempt flags on the case page.
+const lowLivenessScore = (a: Attempt) => {
+  const score = Number.parseFloat(a.liveness_score);
+  return a.liveness_score.trim() !== "" && Number.isFinite(score) && score < LIVENESS_ATTACK_BELOW;
+};
+const failedLiveness = (a: Attempt) => normalizeCode(a.fail_reason) === "LIVENESS_FAIL" || lowLivenessScore(a);
+const unknownFailReason = (a: Attempt) => {
+  const code = normalizeCode(a.fail_reason);
+  return code !== "LIVENESS_FAIL" && !(code in CAUSE_WORDS);
+};
+const fromUntrustedDevice = (a: Attempt, trusted: string) =>
+  !normalizeDeviceId(a.device_id) || normalizeDeviceId(a.device_id) !== trusted;
+const fromAbroad = (a: Attempt, home: string) => !normalizeCountry(a.ip_country) || normalizeCountry(a.ip_country) !== home;
+
+export type AttemptFlag = "device" | "country" | "liveness" | "reason";
+
+/** Which fields of one failed attempt look suspicious (same rules as decideVerdict); successful logins get none. */
+export function attemptFlags(account: { country: string; trustedDeviceId: string }, a: Attempt): AttemptFlag[] {
+  if (normalizeCode(a.result) === "SUCCESS") return [];
+  const flags: AttemptFlag[] = [];
+  const trusted = normalizeDeviceId(account.trustedDeviceId);
+  const home = normalizeCountry(account.country);
+  // Same guards as decideVerdict: with no trusted device / home country on the account, the account is the problem.
+  if (trusted && fromUntrustedDevice(a, trusted)) flags.push("device");
+  if (home && fromAbroad(a, home)) flags.push("country");
+  if (failedLiveness(a)) flags.push("liveness");
+  else if (unknownFailReason(a) || normalizeCode(a.result) !== "FAIL") flags.push("reason");
+  return flags;
+}
+
 /**
  * Unlock policy rule 3: failed attempts from an untrusted device, from another country, or with a failed
  * liveness check look like an attack. Otherwise (rule 4) it is a camera / light problem.
@@ -68,11 +98,7 @@ export function decideVerdict(account: { country: string; trustedDeviceId: strin
     reasons.push(`${plural(odd.length, "attempt", "attempts")} with an unknown result (${values}), ${latest(odd)}.`);
   }
 
-  const lowScore = (a: Attempt) => {
-    const score = Number.parseFloat(a.liveness_score);
-    return a.liveness_score.trim() !== "" && Number.isFinite(score) && score < LIVENESS_ATTACK_BELOW;
-  };
-  const liveness = fails.filter((a) => normalizeCode(a.fail_reason) === "LIVENESS_FAIL" || lowScore(a));
+  const liveness = fails.filter(failedLiveness);
   if (liveness.length) {
     reasons.push(
       `${plural(liveness.length, "failed liveness check", "failed liveness checks")} ` +
@@ -80,16 +106,13 @@ export function decideVerdict(account: { country: string; trustedDeviceId: strin
     );
   }
 
-  const unknownCause = fails.filter((a) => {
-    const code = normalizeCode(a.fail_reason);
-    return code !== "LIVENESS_FAIL" && !(code in CAUSE_WORDS);
-  });
+  const unknownCause = fails.filter(unknownFailReason);
   if (unknownCause.length) {
     const codes = uniqueSorted(unknownCause.map((a) => normalizeCode(a.fail_reason) || "none given")).join(", ");
     reasons.push(`${plural(unknownCause.length, "failed attempt", "failed attempts")} with an unknown failure reason (${codes}), ${latest(unknownCause)}.`);
   }
 
-  const untrusted = fails.filter((a) => !normalizeDeviceId(a.device_id) || normalizeDeviceId(a.device_id) !== trusted);
+  const untrusted = fails.filter((a) => fromUntrustedDevice(a, trusted));
   if (untrusted.length && trusted) {
     const models = uniqueSorted(untrusted.map((a) => a.device_model.trim())).join(", ") || "unknown model";
     reasons.push(
@@ -98,7 +121,7 @@ export function decideVerdict(account: { country: string; trustedDeviceId: strin
     );
   }
 
-  const foreign = fails.filter((a) => !normalizeCountry(a.ip_country) || normalizeCountry(a.ip_country) !== home);
+  const foreign = fails.filter((a) => fromAbroad(a, home));
   if (foreign.length && home) {
     const countries = uniqueSorted(foreign.map((a) => normalizeCountry(a.ip_country) || "unknown")).join(", ");
     reasons.push(

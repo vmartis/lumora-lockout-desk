@@ -13,6 +13,7 @@ const attempt = (over: Partial<Attempt>): Attempt => ({
   matchScore: '0.5',
   result: 'FAIL',
   failReason: 'NO_FACE_DETECTED',
+  flags: [],
   ...over,
 })
 

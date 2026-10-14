@@ -43,6 +43,8 @@ export type Attempt = {
   matchScore: string
   result: string
   failReason: string
+  /** Suspicious fields of a failed attempt, decided on the server with the verdict's rules. */
+  flags: ('device' | 'country' | 'liveness' | 'reason')[]
 }
 
 export type CaseDetail = {

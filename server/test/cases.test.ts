@@ -86,7 +86,7 @@ describe("GET /api/cases/:accountId", () => {
     const body = res.json();
     expect(body.account.registeredPhone).toBe("+421 *** *** 624");
     expect(body.tickets).toHaveLength(1);
-    expect(body.attempts[0]).toMatchObject({ deviceTrusted: true, failReason: "NO_FACE_DETECTED" });
+    expect(body.attempts[0]).toMatchObject({ deviceTrusted: true, failReason: "NO_FACE_DETECTED", flags: [] });
     expect(body.attempts[0]).not.toHaveProperty("device_id");
     expect(body.verdict.kind).toBe("FUMBLE");
     expect(body.appUpdate).toEqual({ current: "4.2.0", latest: "4.3.1" });
@@ -107,7 +107,7 @@ describe("GET /api/cases/:accountId", () => {
     expect(body.attempts.map((a: { attemptId: string }) => a.attemptId)).toEqual(["A1", "A2", "A3", "A9"]);
     expect(body.attempts[1]).toMatchObject({ timestamp: "2026-10-12T06:03:17Z", deviceTrusted: true, country: "SK" });
     expect(Object.keys(body.attempts[0]).sort()).toEqual(
-      ["attemptId", "timestamp", "deviceModel", "deviceTrusted", "appVersion", "country", "livenessScore", "matchScore", "result", "failReason"].sort(),
+      ["attemptId", "timestamp", "deviceModel", "deviceTrusted", "appVersion", "country", "livenessScore", "matchScore", "result", "failReason", "flags"].sort(),
     );
     expect(body.verdict.kind).toBe("FUMBLE");
   });
@@ -478,5 +478,12 @@ describe("audit hardening (security review N3)", () => {
     ];
     const res = await app(api).inject({ method: "GET", url: "/api/cases/LB-000003" });
     expect(res.json().audit).toEqual([{ action: "UNLOCK", agentId: "a-1", verification: "BRANCH", reason: "seen", at: "2026-10-14T18:00:00Z" }]);
+  });
+});
+
+describe("attempt flags through the API (N5)", () => {
+  it("marks the suspicious fields of an attack case", async () => {
+    const res = await app().inject({ method: "GET", url: "/api/cases/LB-000002" });
+    expect(res.json().attempts[0].flags).toEqual(["liveness"]);
   });
 });

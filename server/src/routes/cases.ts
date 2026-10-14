@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import type { AdminApi } from "../adminApi.js";
 import { appUpdate } from "../appVersion.js";
+import { attemptFlags } from "../verdict.js";
 import type { CaseStore } from "../cases.js";
 import { allowedVerifications } from "../verification.js";
 
@@ -61,6 +62,7 @@ export function caseRoutes(app: FastifyInstance, store: CaseStore, adminApi: Adm
         matchScore: a.match_score,
         result: a.result,
         failReason: a.fail_reason,
+        flags: attemptFlags(account, a),
       })),
       verdict,
       allowedVerifications: allowedVerifications(verdict, store.ticketsFor(accountId)),

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { decideVerdict, type Attempt } from "../src/verdict.js";
+import { attemptFlags, decideVerdict, type Attempt } from "../src/verdict.js";
 
 const account = { country: "SK", trustedDeviceId: "dev-1" };
 const attempt = (over: Partial<Attempt>): Attempt => ({
@@ -185,5 +185,34 @@ describe("fails closed on odd data (security review W1)", () => {
       attempt({ result: " fail ", fail_reason: " low_match " }),
     ]);
     expect(v.kind).toBe("FUMBLE");
+  });
+});
+
+describe("attemptFlags – which fields of one attempt look suspicious (N5)", () => {
+  it("flags nothing on a camera failure from the trusted device at home", () => {
+    expect(attemptFlags(account, attempt({}))).toEqual([]);
+  });
+  it("flags device, country, liveness and reason like the verdict does", () => {
+    expect(attemptFlags(account, attempt({ device_id: "dev-9" }))).toEqual(["device"]);
+    expect(attemptFlags(account, attempt({ ip_country: "br" }))).toEqual(["country"]);
+    expect(attemptFlags(account, attempt({ liveness_score: "0.39" }))).toEqual(["liveness"]);
+    expect(attemptFlags(account, attempt({ fail_reason: "LIVENESS_FAIL" }))).toEqual(["liveness"]);
+    expect(attemptFlags(account, attempt({ fail_reason: "SPOOF" }))).toEqual(["reason"]);
+    expect(attemptFlags(account, attempt({ ip_country: "", device_id: "" }))).toEqual(["device", "country"]);
+  });
+  it("does not flag a successful login", () => {
+    expect(attemptFlags(account, attempt({ result: "SUCCESS", fail_reason: "", device_id: "dev-9", ip_country: "NG" }))).toEqual([]);
+  });
+  it("keeps 0.4 itself as not suspicious (same cut-off as the verdict)", () => {
+    expect(attemptFlags(account, attempt({ liveness_score: "0.4" }))).toEqual([]);
+  });
+});
+
+describe("attemptFlags – review N5", () => {
+  it("does not blame the attempts when the account has no trusted device or home country", () => {
+    expect(attemptFlags({ country: "", trustedDeviceId: "" }, attempt({}))).toEqual([]);
+  });
+  it("flags an unknown result as reason", () => {
+    expect(attemptFlags(account, attempt({ result: "DENIED" }))).toEqual(["reason"]);
   });
 });

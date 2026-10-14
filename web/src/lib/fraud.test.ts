@@ -13,6 +13,7 @@ const attempt = (over: Partial<Attempt>): Attempt => ({
   matchScore: '',
   result: 'FAIL',
   failReason: 'LIVENESS_FAIL',
+  flags: [],
   ...over,
 })
 
