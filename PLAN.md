@@ -1,6 +1,6 @@
 # Plan – Lockout Desk (start 19:31 · workflow live by 21:01 · N-items stop 22:06 · close 22:31)
 
-Now: – · Next: FRICTION fix (reason dropdown), then /wrap-up ~22:05 · Elapsed: 2:00
+Now: – · Next: /wrap-up ~22:00, then close note · Elapsed: 2:05
 
 **Contract (fixed in S1):** backend Node + TypeScript + Fastify (`server/`), React SPA (`web/`), one Docker image on :8080, tests with vitest.
 - `GET /api/health` → `{status}`
@@ -36,7 +36,7 @@ Parallel saves: about 15 min (W1 splits server vs web, W2 splits unlock vs queue
 | 7 | N6 | Biometric reset after VIDEO_CALL or BRANCH (omitted in note – needs my OK) | Rarer, stricter path | S5 | routes/unlock.ts, VerifyPanel.tsx | 15 | ✓ |
 | 8 | N7 | Small summary for the lead: lockouts by cause and app version (omitted in note – needs my OK) | Doesn't shorten a customer's wait | S3 | new route + page | 15 | |
 | 9 | N8 | Agent logs in with username + password; the agent ID in the audit comes from the login, not a typed field (omitted in note – needs my OK) | Note omits agent login; no user store in the environment, so agents are seeded in a config file (hashed passwords, scrypt) and the session is a JWT via @fastify/jwt | S2 | server/src/auth.ts, app.ts, main.ts, routes/unlock.ts, config/agents.json, docker-compose.yml, web lib/agent.tsx, LoginPage.tsx, AppShell.tsx | 20 | ✓ |
-| 10 | N9 | Agent sees a read-only profile page (name, agent ID) (omitted in note – needs my OK) | Only useful once N8 exists | N8 | routes/me.ts, ProfilePage.tsx | 10 | |
+| 10 | N9 | Agent sees a read-only profile page (name, agent ID) (omitted in note – needs my OK) | Only useful once N8 exists | N8 | server/src/auth.ts (/api/me), ProfilePage.tsx, App.tsx, AppShell.tsx | 10 | ✓ |
 | 11 | N10 | Agent changes their password (omitted in note – needs my OK) | Needs a writable user store; without a database the change is lost on restart unless a data volume is added | N8 | routes/me.ts, ProfilePage.tsx, docker-compose.yml (volume) | 15 | |
 | 12 | N11 | Agent signs in with the bank's SSO (omitted in note – needs my OK; **blocked**: no identity provider in this environment, so it cannot be built or tested here) | Needs an SSO provider (OIDC) to connect to | N8 | auth plugin, LoginPage.tsx | – | |
 | 13 | N12 | Agent accounts and passwords survive restarts, stored in the app's own database (Postgres service in docker-compose, one `agents` table, parameterised queries) (omitted in note – needs my OK) | Note omits an own database; the Admin API audit already records unlocks; only needed once N8/N10/N13 exist | N8 | docker-compose.yml, server db module + migration, auth plugin | 20 | |

@@ -20,10 +20,12 @@ export function AppShell({ children }: { children: ReactNode }) {
           </Link>
           <HealthBadge />
           <div className="flex items-center gap-2 text-sm">
-            <UserRound className="size-4 text-muted-foreground" aria-hidden />
-            <span>
-              {name} <span className="text-muted-foreground">({agentId})</span>
-            </span>
+            <Link to="/profile" className="flex items-center gap-2 hover:underline" title="Your profile">
+              <UserRound className="size-4 text-muted-foreground" aria-hidden />
+              <span>
+                {name} <span className="text-muted-foreground">({agentId})</span>
+              </span>
+            </Link>
             <Button variant="ghost" size="sm" onClick={() => logout()}>
               <LogOut aria-hidden /> Log out
             </Button>

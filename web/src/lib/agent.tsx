@@ -7,7 +7,7 @@ import { LoginPage } from '@/pages/LoginPage'
 import { api, ApiError, SESSION_ENDED } from '@/lib/api'
 
 // The signed-in agent comes from the server session (httpOnly cookie); the browser never holds the token.
-type Session = { agentId: string; name: string }
+type Session = { agentId: string; name: string; username: string; sessionEndsAt: string }
 type AgentState = Session & { isValid: true; logout: () => Promise<void> }
 const AgentContext = createContext<AgentState | null>(null)
 

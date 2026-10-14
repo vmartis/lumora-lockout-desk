@@ -39,7 +39,13 @@ describe("login", () => {
     expect(cookie.httpOnly).toBe(true);
     expect(cookie.sameSite).toBe("Strict");
     const me = await a.inject({ method: "GET", url: "/api/me", cookies: { session: cookie.value } });
-    expect(me.json()).toEqual({ agentId: "agent-042", name: "Jana Agent" });
+    const body = me.json();
+    expect(body).toMatchObject({ agentId: "agent-042", name: "Jana Agent", username: "jana" });
+    // profile (N9): when the session ends, about 8 hours from now
+    const hours = (Date.parse(body.sessionEndsAt) - Date.now()) / 3_600_000;
+    expect(hours).toBeGreaterThan(7.9);
+    expect(hours).toBeLessThanOrEqual(8);
+    expect(Object.keys(body).sort()).toEqual(["agentId", "name", "sessionEndsAt", "username"]);
   });
 
   it("refuses a wrong password or unknown user with the same answer", async () => {

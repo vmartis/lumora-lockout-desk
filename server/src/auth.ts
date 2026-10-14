@@ -16,6 +16,7 @@ export interface AgentAccount {
 export interface Session {
   agentId: string;
   name: string;
+  username?: string;
 }
 
 declare module "@fastify/jwt" {
@@ -112,7 +113,7 @@ export function registerAuth(app: FastifyInstance, agents: AgentAccount[], secre
       }
       failures.delete(userKey);
       const session: Session = { agentId: agent.agentId, name: agent.name };
-      const token = await reply.jwtSign(session);
+      const token = await reply.jwtSign({ ...session, username: agent.username });
       // Secure needs HTTPS; this environment runs on http://localhost, so it is switched on by COOKIE_SECURE=true.
       const secure = process.env.COOKIE_SECURE === "true";
       reply.setCookie(COOKIE, token, { httpOnly: true, secure, sameSite: "strict", path: "/", maxAge: SESSION_SECONDS });
@@ -125,5 +126,14 @@ export function registerAuth(app: FastifyInstance, agents: AgentAccount[], secre
     return { ok: true };
   });
 
-  app.get("/api/me", async (req) => ({ agentId: req.user.agentId, name: req.user.name }));
+  // Read-only profile (N9): who is signed in and when the session ends. Nothing here can be changed.
+  app.get("/api/me", async (req) => {
+    const exp = (req.user as Session & { exp?: number }).exp;
+    return {
+      agentId: req.user.agentId,
+      name: req.user.name,
+      username: req.user.username ?? "",
+      sessionEndsAt: exp ? new Date(exp * 1000).toISOString() : "",
+    };
+  });
 }
