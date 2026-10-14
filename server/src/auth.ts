@@ -29,7 +29,10 @@ declare module "@fastify/jwt" {
 const COOKIE = "session";
 const SESSION_SECONDS = 8 * 60 * 60; // one shift
 const MAX_FAILURES = 5; // per address + username
-const MAX_FAILURES_PER_ADDRESS = 20; // one address trying many usernames
+// One address trying many usernames is slowed down, never blocked: behind Docker every browser shares one address,
+// so a block would lock every agent out.
+const SLOW_DOWN_AFTER_ADDRESS_FAILURES = 20;
+const SLOW_DOWN_MS = 1000;
 const FAILURE_WINDOW_MS = 15 * 60_000;
 const PUBLIC_ROUTES = new Set(["/api/health", "/api/login", "/api/logout"]);
 
@@ -101,17 +104,21 @@ export function registerAuth(app: FastifyInstance, agents: AgentAccount[], secre
       const userKey = `${req.ip}|${username}`;
       const ipKey = req.ip;
       const now = Date.now();
-      if (recentFailures(userKey, now).length >= MAX_FAILURES || recentFailures(ipKey, now).length >= MAX_FAILURES_PER_ADDRESS) {
+      if (recentFailures(userKey, now).length >= MAX_FAILURES) {
         return reply.code(429).send({ error: "Too many wrong passwords. Try again in 15 minutes or ask your team lead." });
       }
+      const slowDown = recentFailures(ipKey, now).length >= SLOW_DOWN_AFTER_ADDRESS_FAILURES;
+      // Count this attempt as a failure BEFORE the slow password check, so parallel guesses cannot race past the limit.
+      addFailure(userKey, now);
+      addFailure(ipKey, now);
+      if (slowDown) await new Promise((r) => setTimeout(r, SLOW_DOWN_MS));
       const agent = byUsername.get(username);
       const ok = (await verifyPassword(req.body.password, agent?.passwordHash ?? DUMMY_HASH)) && agent !== undefined;
       if (!ok || !agent) {
-        addFailure(userKey, now);
-        addFailure(ipKey, now);
         return reply.code(401).send({ error: "Wrong username or password." });
       }
-      failures.delete(userKey);
+      failures.delete(userKey); // success: forget this user's failures, including the one counted above
+      failures.get(ipKey)?.pop(); // and do not count this successful login against the address
       const session: Session = { agentId: agent.agentId, name: agent.name };
       const token = await reply.jwtSign({ ...session, username: agent.username });
       // Secure needs HTTPS; this environment runs on http://localhost, so it is switched on by COOKIE_SECURE=true.

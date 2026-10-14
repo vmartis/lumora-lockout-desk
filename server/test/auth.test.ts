@@ -70,11 +70,30 @@ describe("login", () => {
     expect((await login(a, "correct horse battery", "jana", "10.0.0.1")).statusCode).toBe(200);
   });
 
-  it("limits one address that tries many usernames", async () => {
+  it("slows down, but never blocks, an address that tries many usernames (final security review)", async () => {
+    // Behind Docker every browser has the same address, so an address-wide block would lock out every agent.
     const a = app();
     for (let i = 0; i < 20; i++) await login(a, "nope", `user${i}`, "10.6.6.6");
-    expect((await login(a, "nope", "other", "10.6.6.6")).statusCode).toBe(429);
-    expect((await login(a, "correct horse battery", "jana", "10.0.0.1")).statusCode).toBe(200);
+    const started = Date.now();
+    const res = await login(a, "correct horse battery", "jana", "10.6.6.6");
+    expect(res.statusCode).toBe(200);
+    expect(Date.now() - started).toBeGreaterThanOrEqual(900);
+  });
+
+  it("does not slow down an address because of successful logins", async () => {
+    const a = app();
+    for (let i = 0; i < 21; i++) expect((await login(a, "correct horse battery")).statusCode).toBe(200);
+    const started = Date.now();
+    await login(a, "correct horse battery");
+    expect(Date.now() - started).toBeLessThan(900);
+  });
+
+  it("counts parallel wrong passwords before checking them (no race past the limit)", async () => {
+    const a = app();
+    const results = await Promise.all(Array.from({ length: 12 }, () => login(a, "nope")));
+    const checked = results.filter((r) => r.statusCode === 401).length;
+    expect(checked).toBeLessThanOrEqual(5);
+    expect(results.filter((r) => r.statusCode === 429).length).toBeGreaterThanOrEqual(7);
   });
 
   it("logs out by clearing the cookie", async () => {
