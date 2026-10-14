@@ -1,15 +1,17 @@
 import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { useNavigate } from 'react-router'
-import { Inbox, Mail, MessageSquare, Phone, RefreshCw, type LucideIcon } from 'lucide-react'
+import { useNavigate, useSearchParams } from 'react-router'
+import { Inbox, Mail, Search, X, MessageSquare, Phone, RefreshCw, type LucideIcon } from 'lucide-react'
 import { RiskBadge } from '@/components/RiskBadge'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { api, formatTime, type CaseSummary } from '@/lib/api'
+import { filterByName } from '@/lib/filter'
 import { summarize, waitingFor } from '@/lib/queue'
 import { cn } from '@/lib/utils'
 
@@ -43,6 +45,11 @@ export function QueuePage() {
     queryFn: () => api<CaseSummary[]>('/cases'),
   })
   const counts = data ? summarize(data) : null
+  // Kept in the URL (?q=) and handed to the case page, so "Back to queue" and browser Back keep the filter.
+  const [params, setParams] = useSearchParams()
+  const query = params.get('q') ?? ''
+  const setQuery = (q: string) => setParams(q ? { q } : {}, { replace: true })
+  const visible = data ? filterByName(data, query) : []
 
   return (
     <Card>
@@ -84,6 +91,36 @@ export function QueuePage() {
           </div>
         )}
         {data && data.length > 0 && (
+          <div className="mb-4 flex items-center gap-3">
+            <div className="relative w-full max-w-sm">
+              <Search className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
+              <Input
+                type="search"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Filter by customer name"
+                aria-label="Filter by customer name"
+                maxLength={100}
+                className="pl-8"
+              />
+            </div>
+            {query.trim() !== '' && (
+              <span className="text-sm text-muted-foreground">
+                {visible.length} of {data.length} shown
+              </span>
+            )}
+          </div>
+        )}
+        {data && data.length > 0 && visible.length === 0 && (
+          <div className="flex flex-col items-center gap-2 py-10 text-center text-muted-foreground">
+            <Search className="size-8" aria-hidden />
+            <p>No locked customer matches “{query.trim()}”.</p>
+            <Button variant="outline" size="sm" onClick={() => setQuery('')}>
+              <X aria-hidden /> Clear filter
+            </Button>
+          </div>
+        )}
+        {visible.length > 0 && (
           <Table>
             <TableHeader>
               <TableRow>
@@ -95,7 +132,7 @@ export function QueuePage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {data.map((c) => {
+              {visible.map((c) => {
                 const attack = c.risk === 'ATTACK'
                 return (
                   <TableRow
@@ -106,8 +143,8 @@ export function QueuePage() {
                     )}
                     tabIndex={0}
                     aria-label={`Open case for ${c.name}`}
-                    onClick={() => navigate(`/cases/${c.accountId}`)}
-                    onKeyDown={(e) => e.key === 'Enter' && navigate(`/cases/${c.accountId}`)}
+                    onClick={() => navigate(`/cases/${c.accountId}`, { state: { queueSearch: params.toString() } })}
+                    onKeyDown={(e) => e.key === 'Enter' && navigate(`/cases/${c.accountId}`, { state: { queueSearch: params.toString() } })}
                   >
                     <TableCell>
                       <div className="font-medium">{c.name}</div>

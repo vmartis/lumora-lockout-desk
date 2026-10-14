@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { Link, useParams } from 'react-router'
+import { Link, useLocation, useParams } from 'react-router'
 import { ArrowLeft, ShieldAlert, CheckCircle2 } from 'lucide-react'
 import { CustomerMessage } from '@/components/CustomerMessage'
 import { RiskBadge } from '@/components/RiskBadge'
@@ -14,6 +14,7 @@ import { api, formatTime, type CaseDetail } from '@/lib/api'
 
 export function CasePage() {
   const { accountId = '' } = useParams()
+  const queueSearch = (useLocation().state as { queueSearch?: string } | null)?.queueSearch
   const { data, isPending, isError, error } = useQuery({
     queryKey: ['case', accountId],
     queryFn: () => api<CaseDetail>(`/cases/${encodeURIComponent(accountId)}`),
@@ -22,7 +23,7 @@ export function CasePage() {
   return (
     <div className="space-y-4">
       <Button variant="ghost" size="sm" asChild>
-        <Link to="/">
+        <Link to={queueSearch ? `/?${queueSearch}` : '/'}>
           <ArrowLeft aria-hidden /> Back to queue
         </Link>
       </Button>

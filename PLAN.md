@@ -1,6 +1,6 @@
 # Plan – Lockout Desk (start 19:31 · workflow live by 21:01 · N-items stop 22:06 · close 22:31)
 
-Now: – · Next: S7 (wave W3) · Elapsed: 1:21
+Now: – · Next: MVP done; N-items need your OK (recommended: N8 agent login) · Elapsed: 1:29
 
 **Contract (fixed in S1):** backend Node + TypeScript + Fastify (`server/`), React SPA (`web/`), one Docker image on :8080, tests with vitest.
 - `GET /api/health` → `{status}`
