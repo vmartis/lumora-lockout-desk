@@ -77,7 +77,11 @@ export function CasePage() {
               </AlertDescription>
             </Alert>
           ) : (
-            <UnlockPanel accountId={data.account.accountId} phone={data.account.registeredPhone} />
+            <UnlockPanel
+              accountId={data.account.accountId}
+              phone={data.account.registeredPhone}
+              allowedVerifications={data.allowedVerifications}
+            />
           )}
 
           <CustomerMessage detail={data} />

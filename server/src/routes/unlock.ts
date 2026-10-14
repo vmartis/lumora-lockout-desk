@@ -1,20 +1,26 @@
 import type { FastifyInstance } from "fastify";
 import type { AdminApi, UnlockRequest } from "../adminApi.js";
 import type { CaseStore } from "../cases.js";
+import { allowedVerifications } from "../verification.js";
 import { accountParams } from "./cases.js";
 
 const ATTACK_REFUSAL = "Do not unlock: this looks like an attack. Escalate to the Fraud team.";
+const SMS_NOT_ALLOWED = "SMS codes are only for customers who contacted us by phone or chat";
 
+// SMS_CHALLENGE needs the challengeId of a code we sent; VIDEO_CALL / BRANCH are only recorded, so they must not carry one.
 const unlockBody = {
   type: "object",
   additionalProperties: false,
-  required: ["agentId", "verification", "challengeId", "reason"],
+  required: ["agentId", "verification", "reason"],
   properties: {
     agentId: { type: "string", pattern: "^[A-Za-z0-9._-]{2,32}$" },
-    verification: { type: "string", enum: ["SMS_CHALLENGE"] }, // VIDEO_CALL / BRANCH come in S5
+    verification: { type: "string", enum: ["SMS_CHALLENGE", "VIDEO_CALL", "BRANCH"] },
     challengeId: { type: "string", format: "uuid" },
     reason: { type: "string", minLength: 5, maxLength: 500 },
   },
+  if: { properties: { verification: { const: "SMS_CHALLENGE" } } },
+  then: { required: ["challengeId"] },
+  else: { not: { required: ["challengeId"] } },
 } as const;
 
 const SMS_COOLDOWN_MS = 30_000;
@@ -23,10 +29,6 @@ export function unlockRoutes(app: FastifyInstance, adminApi: AdminApi, store: Ca
   const challengeOwner = new Map<string, string>(); // challengeId -> accountId, only for challenges started here
   const lastSms = new Map<string, number>();
 
-  async function refuseAttack(accountId: string) {
-    const { verdict } = await store.get(accountId);
-    return verdict.kind === "ATTACK";
-  }
   const notMine = (challengeId: string | undefined, accountId: string) =>
     !challengeId || challengeOwner.get(challengeId) !== accountId;
 
@@ -39,6 +41,9 @@ export function unlockRoutes(app: FastifyInstance, adminApi: AdminApi, store: Ca
       const { account, verdict } = await store.get(accountId);
       if (account.status !== "LOCKED") return reply.code(409).send({ error: "This account is not locked" });
       if (verdict.kind === "ATTACK") return reply.code(403).send({ error: ATTACK_REFUSAL });
+      if (!allowedVerifications(verdict, store.ticketsFor(accountId)).includes("SMS_CHALLENGE")) {
+        return reply.code(403).send({ error: SMS_NOT_ALLOWED });
+      }
       const since = Date.now() - (lastSms.get(accountId) ?? 0);
       if (since < SMS_COOLDOWN_MS) {
         const wait = Math.ceil((SMS_COOLDOWN_MS - since) / 1000);
@@ -80,9 +85,20 @@ export function unlockRoutes(app: FastifyInstance, adminApi: AdminApi, store: Ca
     async (req, reply) => {
       const { accountId } = req.params;
       if (store.ticketsFor(accountId).length === 0) return reply.code(404).send({ error: "No open ticket for this account" });
-      if (await refuseAttack(accountId)) return reply.code(403).send({ error: ATTACK_REFUSAL });
-      if (notMine(req.body.challengeId, accountId)) return reply.code(404).send({ error: "Unknown code request. Send a new code." });
-      const account = await adminApi.unlock(accountId, req.body);
+      const { verdict } = await store.get(accountId);
+      if (verdict.kind === "ATTACK") return reply.code(403).send({ error: ATTACK_REFUSAL });
+      const { agentId, verification, challengeId, reason } = req.body;
+      if (!allowedVerifications(verdict, store.ticketsFor(accountId)).includes(verification)) {
+        return reply.code(403).send({ error: verification === "SMS_CHALLENGE" ? SMS_NOT_ALLOWED : "This verification method is not allowed for this case" });
+      }
+      let request: UnlockRequest;
+      if (verification === "SMS_CHALLENGE") {
+        if (notMine(challengeId, accountId)) return reply.code(404).send({ error: "Unknown code request. Send a new code." });
+        request = { agentId, verification, challengeId, reason };
+      } else {
+        request = { agentId, verification, reason }; // video call / branch: the agent records it, no challenge
+      }
+      const account = await adminApi.unlock(accountId, request);
       store.forget(accountId);
       return { accountId: account.accountId, status: account.status };
     },

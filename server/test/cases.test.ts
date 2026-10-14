@@ -35,11 +35,13 @@ function fakeApi(): AdminApi {
     "LB-000002": locked("LB-000002"),
     "LB-000003": locked("LB-000003", { status: "ACTIVE", lockedAt: null }),
     "LB-000004": locked("LB-000004"), // exists, locked, but has no ticket
+    "LB-000005": locked("LB-000005"), // locked FUMBLE; its email ticket is only in emailTickets below
   };
   const attempts: Record<string, Attempt[]> = {
     "LB-000001": [fail()],
     "LB-000002": [fail({ fail_reason: "LIVENESS_FAIL" })],
     "LB-000003": [],
+    "LB-000005": [fail({ customer_id: "LB-000005" })],
   };
   return {
     health: async () => true,
@@ -185,6 +187,95 @@ describe("POST /api/cases/:accountId/unlock", () => {
     const res = await (await withChallenge(api)).inject({ method: "POST", url: "/api/cases/LB-000001/unlock", payload: validUnlock });
     expect(res.statusCode).toBe(422);
     expect(res.json().error).toMatch(/verified/);
+  });
+});
+
+// Customer wrote only by email: policy allows VIDEO_CALL or BRANCH, never SMS.
+const emailTickets: Ticket[] = [
+  ...tickets,
+  { ticketId: "T5", createdAt: "2026-10-11T10:00:00Z", accountId: "LB-000005", channel: "email", status: "NEW", text: "help" },
+];
+const emailApp = (api = fakeApi()) => buildApp({ adminApi: api, tickets: emailTickets });
+const videoUnlock = { agentId: "agent-042", verification: "VIDEO_CALL", reason: "Compared face with passport on video call" };
+
+describe("verification methods by ticket channel (S5)", () => {
+  it("offers SMS, video call and branch for a phone ticket", async () => {
+    const res = await app().inject({ method: "GET", url: "/api/cases/LB-000001" });
+    expect(res.json().allowedVerifications).toEqual(["SMS_CHALLENGE", "VIDEO_CALL", "BRANCH"]);
+  });
+
+  it("offers only video call and branch for an email-only ticket", async () => {
+    const res = await emailApp().inject({ method: "GET", url: "/api/cases/LB-000005" });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().allowedVerifications).toEqual(["VIDEO_CALL", "BRANCH"]);
+  });
+
+  it("offers nothing for an ATTACK case", async () => {
+    const res = await app().inject({ method: "GET", url: "/api/cases/LB-000002" });
+    expect(res.json().allowedVerifications).toEqual([]);
+  });
+
+  it("refuses to send an SMS code for an email-only ticket", async () => {
+    const api = fakeApi();
+    const res = await emailApp(api).inject({ method: "POST", url: "/api/cases/LB-000005/sms", payload: {} });
+    expect(res.statusCode).toBe(403);
+    expect(res.json().error).toBe("SMS codes are only for customers who contacted us by phone or chat");
+    expect(api.startSms).not.toHaveBeenCalled();
+  });
+
+  it("refuses an SMS_CHALLENGE unlock for an email-only ticket (403)", async () => {
+    const api = fakeApi();
+    const res = await emailApp(api).inject({ method: "POST", url: "/api/cases/LB-000005/unlock", payload: validUnlock });
+    expect(res.statusCode).toBe(403);
+    expect(api.unlock).not.toHaveBeenCalled();
+  });
+
+  it.each(["VIDEO_CALL", "BRANCH"])("unlocks an email-only case with %s and no challengeId", async (verification) => {
+    const api = fakeApi();
+    const payload = { ...videoUnlock, verification };
+    const res = await emailApp(api).inject({ method: "POST", url: "/api/cases/LB-000005/unlock", payload });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().status).toBe("ACTIVE");
+    expect(api.unlock).toHaveBeenCalledWith("LB-000005", { agentId: "agent-042", verification, reason: videoUnlock.reason });
+  });
+
+  it("unlocks a phone case with VIDEO_CALL too", async () => {
+    const api = fakeApi();
+    const res = await app(api).inject({ method: "POST", url: "/api/cases/LB-000001/unlock", payload: videoUnlock });
+    expect(res.statusCode).toBe(200);
+    expect(api.unlock).toHaveBeenCalledWith("LB-000001", videoUnlock);
+  });
+
+  it("rejects a VIDEO_CALL unlock that carries a challengeId (400)", async () => {
+    const api = fakeApi();
+    const payload = { ...videoUnlock, challengeId: "11111111-1111-4111-8111-111111111111" };
+    const res = await emailApp(api).inject({ method: "POST", url: "/api/cases/LB-000005/unlock", payload });
+    expect(res.statusCode).toBe(400);
+    expect(api.unlock).not.toHaveBeenCalled();
+  });
+
+  it("rejects an SMS_CHALLENGE unlock without a challengeId (400)", async () => {
+    const api = fakeApi();
+    const payload = { agentId: validUnlock.agentId, verification: "SMS_CHALLENGE", reason: validUnlock.reason };
+    const res = await (await withChallenge(api)).inject({ method: "POST", url: "/api/cases/LB-000001/unlock", payload });
+    expect(res.statusCode).toBe(400);
+    expect(api.unlock).not.toHaveBeenCalled();
+  });
+
+  it.each(["VIDEO_CALL", "BRANCH"])("still refuses %s for an ATTACK case (403)", async (verification) => {
+    const api = fakeApi();
+    const res = await app(api).inject({ method: "POST", url: "/api/cases/LB-000002/unlock", payload: { ...videoUnlock, verification } });
+    expect(res.statusCode).toBe(403);
+    expect(res.json().error).toMatch(/fraud/i);
+    expect(api.unlock).not.toHaveBeenCalled();
+  });
+
+  it("rejects a too-short reason for VIDEO_CALL (400)", async () => {
+    const api = fakeApi();
+    const payload = { ...videoUnlock, reason: "ok" };
+    const res = await emailApp(api).inject({ method: "POST", url: "/api/cases/LB-000005/unlock", payload });
+    expect(res.statusCode).toBe(400);
+    expect(api.unlock).not.toHaveBeenCalled();
   });
 });
 

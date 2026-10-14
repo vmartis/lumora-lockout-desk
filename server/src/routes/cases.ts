@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import type { CaseStore } from "../cases.js";
+import { allowedVerifications } from "../verification.js";
 
 export const accountParams = {
   type: "object",
@@ -40,7 +41,7 @@ export function caseRoutes(app: FastifyInstance, store: CaseStore) {
         failReason: a.fail_reason,
       })),
       verdict,
-      allowedVerifications: verdict.kind === "ATTACK" ? [] : ["SMS_CHALLENGE"],
+      allowedVerifications: allowedVerifications(verdict, store.ticketsFor(accountId)),
     };
   });
 }
