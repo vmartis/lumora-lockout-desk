@@ -1,0 +1,30 @@
+# Environment services. Add your own app service(s) below "# --- your services ---".
+services:
+  identity-admin-api:
+    build: ./services/identity-admin-api
+    environment:
+      ADMIN_API_KEY: ${ADMIN_API_KEY:-local-dev-admin-key-change-me}
+      DATA_DIR: /data
+    volumes:
+      - ./data:/data:ro
+    ports:
+      - "127.0.0.1:9100:9100"
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:9100/health')"]
+      interval: 5s
+      retries: 10
+  # --- your services ---
+  # Your app must listen on port 8080 and can reach the Identity Admin API at http://identity-admin-api:9100
+  lockout-desk:
+    build: .
+    environment:
+      ADMIN_API_KEY: ${ADMIN_API_KEY:-local-dev-admin-key-change-me}
+      ADMIN_API_URL: http://identity-admin-api:9100
+      TICKETS_FILE: /data/support_tickets.csv
+    volumes:
+      - ./data/support_tickets.csv:/data/support_tickets.csv:ro
+    ports:
+      - "127.0.0.1:8080:8080"
+    depends_on:
+      identity-admin-api:
+        condition: service_healthy
