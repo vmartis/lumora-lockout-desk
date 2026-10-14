@@ -1,6 +1,6 @@
 # Plan – Lockout Desk (start 19:31 · workflow live by 21:01 · N-items stop 22:06 · close 22:31)
 
-Now: – · Next: S5 S6 (wave W2) · Elapsed: 1:13
+Now: S5 S6 (started 20:44) · Next: S7 (wave W3) · Elapsed: 1:13
 
 **Contract (fixed in S1):** backend Node + TypeScript + Fastify (`server/`), React SPA (`web/`), one Docker image on :8080, tests with vitest.
 - `GET /api/health` → `{status}`
@@ -38,6 +38,8 @@ Parallel saves: about 15 min (W1 splits server vs web, W2 splits unlock vs queue
 | 9 | N9 | Agent sees a read-only profile page (name, agent ID) (omitted in note – needs my OK) | Only useful once N8 exists | N8 | routes/me.ts, ProfilePage.tsx | 10 | |
 | 10 | N10 | Agent changes their password (omitted in note – needs my OK) | Needs a writable user store; without a database the change is lost on restart unless a data volume is added | N8 | routes/me.ts, ProfilePage.tsx, docker-compose.yml (volume) | 15 | |
 | 11 | N11 | Agent signs in with the bank's SSO (omitted in note – needs my OK; **blocked**: no identity provider in this environment, so it cannot be built or tested here) | Needs an SSO provider (OIDC) to connect to | N8 | auth plugin, LoginPage.tsx | – | |
+| 12 | N12 | Agent accounts and passwords survive restarts, stored in the app's own database (Postgres service in docker-compose, one `agents` table, parameterised queries) (omitted in note – needs my OK) | Note omits an own database; the Admin API audit already records unlocks; only needed once N8/N10/N13 exist | N8 | docker-compose.yml, server db module + migration, auth plugin | 20 | |
+| 13 | N13 | A manager adds, disables and re-enables agents and sets their role (agent / manager); agents cannot see this page (omitted in note – needs my OK) | Note omits roles; needs login (N8) and a database (N12) first | N8, N12 | routes/agents.ts (manager-only), AgentsPage.tsx, auth plugin (role check) | 20 | |
 
 Rule: an N-item starts only when the whole MVP table is ticked, there are no open fixes in FRICTION.md with higher value, and there are at least (item minutes + 10) minutes left before +2:35 (22:06).
 
