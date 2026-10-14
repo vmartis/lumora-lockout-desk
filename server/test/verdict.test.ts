@@ -113,7 +113,7 @@ describe("attack reasons (policy rule 3)", () => {
 
 describe("fail closed", () => {
   const unknown =
-    "No failed face-login attempts found, so the cause of the lockout is unknown. Do not unlock here; verify by video call or branch and escalate.";
+    "No failed face-login attempts found, so the cause of the lockout is unknown. Do not unlock; escalate to the Fraud team.";
 
   it("is ATTACK when there are no attempts at all", () => {
     expect(decideVerdict(account, [])).toEqual({ kind: "ATTACK", reasons: [unknown] });
@@ -150,8 +150,40 @@ describe("fumble reasons (policy rule 4)", () => {
     expect(decideVerdict(account, [attempt({ fail_reason: "TIMEOUT" })]).kind).toBe("FUMBLE");
   });
 
-  it("says 'no reason given' for a failure without a reason", () => {
+  it("treats a failure without a reason as unknown (ATTACK), not as a camera problem", () => {
     const v = decideVerdict(account, [attempt({ fail_reason: "" })]);
-    expect(v.reasons[0]).toMatch(/no reason given \(1\)/);
+    expect(v.kind).toBe("ATTACK");
+    expect(v.reasons.join(" ")).toMatch(/unknown failure reason \(none given\)/);
+  });
+});
+
+describe("fails closed on odd data (security review W1)", () => {
+  const trustedFail = attempt({});
+  it.each([
+    ["result FAILED from NG", attempt({ result: "FAILED", device_id: "dev-evil", ip_country: "NG", fail_reason: "LIVENESS_FAIL" })],
+    ["result DENIED", attempt({ result: "DENIED" })],
+    ["unknown fail reason", attempt({ fail_reason: "SPOOF_DETECTED" })],
+    ["variant liveness code", attempt({ fail_reason: "liveness-fail" })],
+    ["empty fail reason", attempt({ fail_reason: "" })],
+    ["very low liveness score", attempt({ liveness_score: "0.05" })],
+    ["empty attempt device", attempt({ device_id: "" })],
+    ["empty attempt country", attempt({ ip_country: "" })],
+    ["non-ASCII country that upper-cases to SK", attempt({ ip_country: "ſk" })],
+  ])("%s → ATTACK", (_name, odd) => {
+    expect(decideVerdict(account, [trustedFail, odd]).kind).toBe("ATTACK");
+  });
+
+  it("is ATTACK when the account has no home country or trusted device", () => {
+    expect(decideVerdict({ country: "", trustedDeviceId: "" }, [attempt({ ip_country: "", device_id: "" })]).kind).toBe("ATTACK");
+    expect(decideVerdict({ country: "SK", trustedDeviceId: "" }, [attempt({ device_id: "" })]).kind).toBe("ATTACK");
+  });
+
+  it("keeps real camera problems as FUMBLE, including an empty liveness score on a timeout", () => {
+    const v = decideVerdict(account, [
+      attempt({ fail_reason: "POOR_LIGHT", liveness_score: "0.515" }),
+      attempt({ fail_reason: "TIMEOUT", liveness_score: "" }),
+      attempt({ result: " fail ", fail_reason: " low_match " }),
+    ]);
+    expect(v.kind).toBe("FUMBLE");
   });
 });

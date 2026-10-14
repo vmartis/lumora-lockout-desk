@@ -26,8 +26,13 @@ export function parseTimestamp(raw: string): string | null {
   return null;
 }
 
-export const normalizeCountry = (raw: string): string => raw.trim().toUpperCase();
+/** Two ASCII letters, upper-cased; anything else (empty, "ſk", "Slovakia") becomes "" = unknown. */
+export const normalizeCountry = (raw: string): string => {
+  const t = raw.trim();
+  return /^[A-Za-z]{2}$/.test(t) ? t.toUpperCase() : "";
+};
 export const normalizeDeviceId = (raw: string): string => raw.trim();
+export const normalizeCode = (raw: string): string => raw.trim().toUpperCase();
 
 /** Same attempt with a UTC timestamp (or the trimmed raw text if unreadable), clean country and device id. */
 export function normalizeAttempt(a: Attempt): Attempt {
@@ -36,6 +41,8 @@ export function normalizeAttempt(a: Attempt): Attempt {
     timestamp: parseTimestamp(a.timestamp) ?? a.timestamp.trim(),
     ip_country: normalizeCountry(a.ip_country),
     device_id: normalizeDeviceId(a.device_id),
+    result: normalizeCode(a.result),
+    fail_reason: normalizeCode(a.fail_reason),
   };
 }
 

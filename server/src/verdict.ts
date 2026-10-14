@@ -1,4 +1,4 @@
-import { normalizeCountry, normalizeDeviceId, parseTimestamp } from "./normalize.js";
+import { normalizeCode, normalizeCountry, normalizeDeviceId, parseTimestamp } from "./normalize.js";
 
 /** One face-login attempt as returned by the Admin API (raw CSV columns). */
 export interface Attempt {
@@ -21,7 +21,10 @@ export interface Verdict {
 }
 
 export const NO_FAILURES_REASON =
-  "No failed face-login attempts found, so the cause of the lockout is unknown. Do not unlock here; verify by video call or branch and escalate.";
+  "No failed face-login attempts found, so the cause of the lockout is unknown. Do not unlock; escalate to the Fraud team.";
+
+/** Liveness scores of real spoofs in the data are <= 0.35, of real camera failures >= 0.50. */
+export const LIVENESS_ATTACK_BELOW = 0.4;
 
 const CAUSE_WORDS: Record<string, string> = {
   NO_FACE_DETECTED: "camera did not find a face",
@@ -45,14 +48,31 @@ function latest(group: Attempt[]): string {
  * Fails closed: with no failed attempts the cause is unknown, so it is treated as ATTACK (no unlock offered).
  */
 export function decideVerdict(account: { country: string; trustedDeviceId: string }, attempts: Attempt[]): Verdict {
-  const fails = attempts.filter((a) => a.result.trim().toUpperCase() === "FAIL");
+  // Fail closed: anything that is not a clear SUCCESS counts as a failure.
+  const fails = attempts.filter((a) => normalizeCode(a.result) !== "SUCCESS");
   if (fails.length === 0) return { kind: "ATTACK", reasons: [NO_FAILURES_REASON] };
 
   const home = normalizeCountry(account.country);
   const trusted = normalizeDeviceId(account.trustedDeviceId);
   const reasons: string[] = [];
 
-  const liveness = fails.filter((a) => a.fail_reason.trim().toUpperCase() === "LIVENESS_FAIL");
+  if (!home || !trusted) {
+    reasons.push(
+      `The customer's ${!home ? "home country" : "trusted device"} is missing, so the attempts cannot be checked. Do not unlock; escalate to the Fraud team.`,
+    );
+  }
+
+  const odd = fails.filter((a) => normalizeCode(a.result) !== "FAIL");
+  if (odd.length) {
+    const values = uniqueSorted(odd.map((a) => normalizeCode(a.result) || "empty")).join(", ");
+    reasons.push(`${plural(odd.length, "attempt", "attempts")} with an unknown result (${values}), ${latest(odd)}.`);
+  }
+
+  const lowScore = (a: Attempt) => {
+    const score = Number.parseFloat(a.liveness_score);
+    return a.liveness_score.trim() !== "" && Number.isFinite(score) && score < LIVENESS_ATTACK_BELOW;
+  };
+  const liveness = fails.filter((a) => normalizeCode(a.fail_reason) === "LIVENESS_FAIL" || lowScore(a));
   if (liveness.length) {
     reasons.push(
       `${plural(liveness.length, "failed liveness check", "failed liveness checks")} ` +
@@ -60,8 +80,17 @@ export function decideVerdict(account: { country: string; trustedDeviceId: strin
     );
   }
 
-  const untrusted = fails.filter((a) => normalizeDeviceId(a.device_id) !== trusted);
-  if (untrusted.length) {
+  const unknownCause = fails.filter((a) => {
+    const code = normalizeCode(a.fail_reason);
+    return code !== "LIVENESS_FAIL" && !(code in CAUSE_WORDS);
+  });
+  if (unknownCause.length) {
+    const codes = uniqueSorted(unknownCause.map((a) => normalizeCode(a.fail_reason) || "none given")).join(", ");
+    reasons.push(`${plural(unknownCause.length, "failed attempt", "failed attempts")} with an unknown failure reason (${codes}), ${latest(unknownCause)}.`);
+  }
+
+  const untrusted = fails.filter((a) => !normalizeDeviceId(a.device_id) || normalizeDeviceId(a.device_id) !== trusted);
+  if (untrusted.length && trusted) {
     const models = uniqueSorted(untrusted.map((a) => a.device_model.trim())).join(", ") || "unknown model";
     reasons.push(
       `${plural(untrusted.length, "failed attempt", "failed attempts")} from a device that is not the customer's trusted device ` +
@@ -69,23 +98,22 @@ export function decideVerdict(account: { country: string; trustedDeviceId: strin
     );
   }
 
-  const foreign = fails.filter((a) => normalizeCountry(a.ip_country) !== home);
-  if (foreign.length) {
-    const countries = uniqueSorted(foreign.map((a) => normalizeCountry(a.ip_country))).join(", ") || "unknown country";
+  const foreign = fails.filter((a) => !normalizeCountry(a.ip_country) || normalizeCountry(a.ip_country) !== home);
+  if (foreign.length && home) {
+    const countries = uniqueSorted(foreign.map((a) => normalizeCountry(a.ip_country) || "unknown")).join(", ");
     reasons.push(
-      `${plural(foreign.length, "failed attempt", "failed attempts")} from another country (${countries}); ` +
-        `the customer lives in ${home}, ${latest(foreign)}.`,
+      `${plural(foreign.length, "failed attempt", "failed attempts")} from another country (${countries}), ` +
+        `${latest(foreign)}; the customer lives in ${home}.`,
     );
   }
 
   if (reasons.length) return { kind: "ATTACK", reasons };
 
-  // Everything left came from the trusted device in the home country. LOW_MATCH and TIMEOUT count as FUMBLE too:
-  // policy rule 3 names only an untrusted device, a foreign country and failed liveness as attack examples.
+  // Everything left came from the trusted device in the home country with a known camera-type cause. LOW_MATCH and
+  // TIMEOUT count as FUMBLE too: policy rule 3 names only an untrusted device, a foreign country and failed liveness.
   const counts = new Map<string, number>();
   for (const a of fails) {
-    const code = a.fail_reason.trim().toUpperCase();
-    const words = CAUSE_WORDS[code] ?? (code ? `other (${code})` : "no reason given");
+    const words = CAUSE_WORDS[normalizeCode(a.fail_reason)];
     counts.set(words, (counts.get(words) ?? 0) + 1);
   }
   const causes = [...counts].sort((x, y) => y[1] - x[1]).map(([words, n]) => `${words} (${n})`).join(", ");

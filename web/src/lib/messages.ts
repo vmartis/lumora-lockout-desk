@@ -21,7 +21,7 @@ export function customerMessage(detail: CaseDetail): string {
   if (detail.verdict.kind === 'ATTACK') {
     return [
       greeting,
-      'We are protecting your account. We noticed some login activity that we want to check, so our security team is reviewing your account now.',
+      'We are protecting your account, and it needs an extra check first.',
       'We will contact you as soon as the review is done. You do not need to do anything right now.',
       NEVER_ASK,
       'Thank you for your patience.',

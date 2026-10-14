@@ -96,7 +96,8 @@ describe('customerMessage – attack', () => {
   it('says we are protecting the account without revealing detection details', () => {
     const msg = customerMessage(attack)
     expect(msg).toMatch(/protecting/i)
-    expect(msg).toMatch(/security team/i)
+    expect(msg).not.toMatch(/noticed|suspicious|activity|security team/i)
+    expect(msg).toMatch(/extra check/i)
     expect(msg).toMatch(/contact you/i)
     expect(msg).toContain('We will never ask you for your password or full card number.')
     expect(msg).toContain('Jana')
