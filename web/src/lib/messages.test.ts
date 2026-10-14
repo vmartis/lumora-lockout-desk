@@ -38,6 +38,7 @@ const detail = (over: Over = {}): CaseDetail => ({
   verdict: over.verdict ?? { kind: 'FUMBLE', reasons: ['5 failed attempts'] },
   allowedVerifications: ['SMS_CHALLENGE'],
   appUpdate: over.appUpdate ?? null,
+  audit: [],
 })
 
 describe('customerMessage – fumble', () => {

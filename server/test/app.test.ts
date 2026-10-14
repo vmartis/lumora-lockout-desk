@@ -19,6 +19,7 @@ const fakeAdminApi = (up: boolean | Error): AdminApi => ({
   startSms: notFound,
   checkSms: notFound,
   unlock: notFound,
+  getAudit: notFound,
 });
 
 function staticDir() {

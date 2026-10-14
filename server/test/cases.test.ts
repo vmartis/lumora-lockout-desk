@@ -53,6 +53,10 @@ function fakeApi(): AdminApi {
     startSms: vi.fn(async () => ({ challengeId: "11111111-1111-4111-8111-111111111111" })),
     checkSms: vi.fn(async (_id: string, code: string) => ({ verified: code === "123456" })),
     unlock: vi.fn(async (id: string) => ({ ...accounts[id], status: "ACTIVE" as const, lockedAt: null })),
+    getAudit: async () => [
+      { action: "UNLOCK", accountId: "LB-000003", agentId: "agent-007", verification: "BRANCH", reason: "Seen at branch", at: "2026-10-14T18:00:00Z" },
+      { action: "UNLOCK", accountId: "LB-000099", agentId: "agent-008", verification: "VIDEO_CALL", reason: "other customer", at: "2026-10-14T18:01:00Z" },
+    ],
   };
 }
 
@@ -430,5 +434,49 @@ describe("hardening (security review W2)", () => {
       expect((await a.inject({ method: "POST", url: "/api/cases/LB-000001/unlock", payload })).statusCode).toBe(400);
     }
     expect(api.unlock).not.toHaveBeenCalled();
+  });
+});
+
+describe("audit on the case page (N3)", () => {
+  it("shows only this account's audit entries", async () => {
+    const res = await app().inject({ method: "GET", url: "/api/cases/LB-000003" });
+    expect(res.json().audit).toEqual([
+      { action: "UNLOCK", agentId: "agent-007", verification: "BRANCH", reason: "Seen at branch", at: "2026-10-14T18:00:00Z" },
+    ]);
+  });
+
+  it("returns an empty audit for a case without unlocks", async () => {
+    const res = await app().inject({ method: "GET", url: "/api/cases/LB-000001" });
+    expect(res.json().audit).toEqual([]);
+  });
+
+  it("still shows the case when the audit cannot be read", async () => {
+    const api = fakeApi();
+    api.getAudit = async () => { throw new AdminApiError(502, "unreachable"); };
+    const res = await app(api).inject({ method: "GET", url: "/api/cases/LB-000001" });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().audit).toBeNull();
+  });
+});
+
+describe("audit hardening (security review N3)", () => {
+  it.each([
+    ["an object instead of a list", {}],
+    ["a list with a null entry", [null]],
+  ])("still shows the case when the audit is %s", async (_n, bad) => {
+    const api = fakeApi();
+    api.getAudit = async () => bad as never;
+    const res = await app(api).inject({ method: "GET", url: "/api/cases/LB-000003" });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().audit).toBeNull();
+  });
+
+  it("passes on only the audit fields the agent needs", async () => {
+    const api = fakeApi();
+    api.getAudit = async () => [
+      { action: "UNLOCK", accountId: "LB-000003", agentId: "a-1", verification: "BRANCH", reason: "seen", at: "2026-10-14T18:00:00Z", customerPhone: "+421900111551", ip: "10.0.0.1" } as never,
+    ];
+    const res = await app(api).inject({ method: "GET", url: "/api/cases/LB-000003" });
+    expect(res.json().audit).toEqual([{ action: "UNLOCK", agentId: "a-1", verification: "BRANCH", reason: "seen", at: "2026-10-14T18:00:00Z" }]);
   });
 });

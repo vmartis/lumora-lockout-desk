@@ -21,6 +21,15 @@ export interface UnlockRequest {
   reason: string;
 }
 
+export interface AuditEntry {
+  action: string;
+  accountId: string;
+  agentId: string;
+  verification: string;
+  reason: string;
+  at: string;
+}
+
 export interface AdminApi {
   health(): Promise<boolean>;
   getAccount(accountId: string): Promise<Account>;
@@ -28,6 +37,7 @@ export interface AdminApi {
   startSms(accountId: string): Promise<{ challengeId: string }>;
   checkSms(challengeId: string, code: string): Promise<{ verified: boolean }>;
   unlock(accountId: string, req: UnlockRequest): Promise<Account>;
+  getAudit(): Promise<AuditEntry[]>;
 }
 
 /** An answer from the Admin API we pass on to the agent (its messages hold no personal data). */
@@ -102,5 +112,6 @@ export function createAdminApi(baseUrl: string, apiKey: string): AdminApi {
     startSms: (id) => call("/verification/sms", { accountId: id }),
     checkSms: (challengeId, code) => call(`/verification/sms/${enc(challengeId)}/check`, { code }),
     unlock: (id, req) => call(`/accounts/${enc(id)}/unlock`, req),
+    getAudit: () => call("/audit"),
   };
 }

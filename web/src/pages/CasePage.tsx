@@ -10,7 +10,45 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { api, formatTime, type CaseDetail } from '@/lib/api'
+import { api, formatTime, type AuditEntry, type CaseDetail } from '@/lib/api'
+
+const METHOD_WORDS: Record<string, string> = {
+  SMS_CHALLENGE: 'SMS code',
+  VIDEO_CALL: 'video call with ID document',
+  BRANCH: 'branch visit',
+}
+const ACTION_WORDS: Record<string, string> = { UNLOCK: 'Unlocked', RESET_BIOMETRICS: 'Face login reset' }
+
+function AuditCard({ audit }: { audit: AuditEntry[] | null }) {
+  if (audit === null) {
+    return (
+      <Alert>
+        <AlertTitle>Account history not available</AlertTitle>
+        <AlertDescription>The audit log of the Identity Admin API could not be read. Try again later.</AlertDescription>
+      </Alert>
+    )
+  }
+  if (audit.length === 0) return null
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Account history</CardTitle>
+        <CardDescription>From the Identity Admin API audit log.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-2 text-sm">
+        {[...audit].reverse().map((e, i) => (
+          <div key={`${i}-${e.at}`} className="rounded-md border p-3">
+            <div className="font-medium">
+              {ACTION_WORDS[e.action] ?? e.action} by {e.agentId} after {METHOD_WORDS[e.verification] ?? e.verification}
+            </div>
+            <div className="text-xs text-muted-foreground">{formatTime(e.at)}</div>
+            <div className="mt-1">Reason: {e.reason}</div>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  )
+}
 
 export function CasePage() {
   const { accountId = '' } = useParams()
@@ -67,6 +105,8 @@ export function CasePage() {
               </ul>
             </CardContent>
           </Card>
+
+          <AuditCard audit={data.audit} />
 
           {data.account.status === 'ACTIVE' ? (
             <Alert>

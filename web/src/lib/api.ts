@@ -61,7 +61,11 @@ export type CaseDetail = {
   allowedVerifications: string[]
   /** Set when the customer's app is older than the latest release (failures on 4.2.0 are much higher). */
   appUpdate: { current: string; latest: string } | null
+  /** Unlocks/resets of this account from the Admin API audit log; null when it could not be read. */
+  audit: AuditEntry[] | null
 }
 
 export const formatTime = (iso: string | null) =>
   iso ? new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : '–'
+
+export type AuditEntry = { action: string; agentId: string; verification: string; reason: string; at: string }

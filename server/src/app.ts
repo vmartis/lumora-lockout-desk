@@ -57,7 +57,7 @@ export function buildApp({ adminApi, tickets = [], staticDir, logStream }: AppDe
   });
 
   const store = createCaseStore(adminApi, tickets);
-  caseRoutes(app, store);
+  caseRoutes(app, store, adminApi);
   unlockRoutes(app, adminApi, store);
 
   app.get("/api/health", async () => {
