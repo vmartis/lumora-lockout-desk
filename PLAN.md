@@ -2,7 +2,7 @@
 
 Now: wrap-up done (22:09) · Next: P9 close note · Elapsed: 2:38
 
-**Done (committed, deployed):** MVP S1–S7; N1, N2, N3, N4, N5, N7, N8, N9, N14; friction fix (top-3 reason chips). **Not done:** N6 biometric reset, N10 change password, N11 SSO (blocked: no provider), N12 own database, N13 agent/manager management. **Pending:** FRICTION.md rows for items added after go-live are on branch `friction-draft` until the wording is confirmed.
+**Done (committed, deployed):** MVP S1–S7; N1, N2, N3, N4, N5, N7, N8, N9, N14; friction fix (top-3 reason chips). **Not done:** N6 biometric reset, N10 change password, N11 SSO (blocked: no provider), N12 own database, N13 agent/manager management. **Pending:** FRICTION.md rows for items added after go-live are merged; their wording is still marked "(check)" until confirmed.
 
 **Contract (fixed in S1):** backend Node + TypeScript + Fastify (`server/`), React SPA (`web/`), one Docker image on :8080, tests with vitest.
 - `GET /api/health` → `{status}`

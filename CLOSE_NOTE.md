@@ -11,7 +11,7 @@ A Customer Care agent opens http://localhost:8080, signs in, and works through l
 
 # WHAT I CHANGED AFTER TRYING IT MYSELF
 - **Reason suggestions:** before, every saved and team reason was shown as a chip, so the row got long and hard to scan. After, only the 3 most used are chips and the rest are in a "More reasons (n)…" dropdown. The agent picks a reason in one click instead of reading a wall of chips.
-- More items I added to the plan after testing (customer name filter, agent login and profile, reason suggestions) are logged as friction on branch `friction-draft`. They are not merged, because their wording is still to be confirmed.
+- More items I added to the plan after testing (customer name filter, agent login and profile, reason suggestions) are logged in FRICTION.md. Their wording is still marked "(check)" until I confirm it.
 
 # WHAT IS STILL ROUGH
 - **Data:** tickets are read from the CSV at start, so new tickets only appear after a restart. The verdict uses the latest 50 attempts, not "the last 3 days" as DECISIONS.md says.
