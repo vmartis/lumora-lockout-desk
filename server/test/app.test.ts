@@ -4,13 +4,21 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { buildApp } from "../src/app.js";
-import type { AdminApi } from "../src/adminApi.js";
+import { AdminApiError, type AdminApi } from "../src/adminApi.js";
 
+const notFound = async (): Promise<never> => {
+  throw new AdminApiError(404, "not found");
+};
 const fakeAdminApi = (up: boolean | Error): AdminApi => ({
   health: async () => {
     if (up instanceof Error) throw up;
     return up;
   },
+  getAccount: notFound,
+  getAttempts: notFound,
+  startSms: notFound,
+  checkSms: notFound,
+  unlock: notFound,
 });
 
 function staticDir() {
@@ -61,7 +69,6 @@ describe("logging", () => {
       },
     });
     const app = buildApp({ adminApi: fakeAdminApi(true), staticDir: staticDir(), logStream });
-    app.get("/api/cases/:accountId", async () => ({ ok: true }));
     await app.inject({ method: "GET", url: "/api/cases/LB-000083?email=jane.doe@example.com" });
     await app.inject({ method: "GET", url: "/api/health?phone=+421900111222" });
 

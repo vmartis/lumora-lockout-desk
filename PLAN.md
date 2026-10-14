@@ -1,6 +1,6 @@
 # Plan – Lockout Desk (start 19:31 · workflow live by 21:01 · N-items stop 22:06 · close 22:31)
 
-Now: – · Next: S2 · Elapsed: 0:30
+Now: – · Next: S3 S4 (wave W1) · Elapsed: 0:43
 
 **Contract (fixed in S1):** backend Node + TypeScript + Fastify (`server/`), React SPA (`web/`), one Docker image on :8080, tests with vitest.
 - `GET /api/health` → `{status}`
@@ -14,7 +14,7 @@ Now: – · Next: S2 · Elapsed: 0:30
 | # | Wave | Slice (what the user can do after it) | Depends on | Touches (files/areas) | Done when (check) | Min | ✓ |
 |---|---|---|---|---|---|---|---|
 | S1 | W0 | Agent opens http://localhost:8080 and sees the Lockout Desk app shell (header with product name + agent ID field) and a health badge from the backend | – | Dockerfile, docker-compose.yml, server/ skeleton, web/ (Vite + shadcn init), routes/cases.ts stub (moved to S2) | `./deploy.sh` passes; `curl :8080/api/health` = UP; page shows header + "API connected"; 1 server test green | 20 | ✓ |
-| S2 | W0 | Agent sees the queue of locked accounts from tickets, opens a case with the attempts and a basic verdict, verifies by SMS and unlocks with a reason; an ATTACK case cannot be unlocked | S1 | adminApi.ts, tickets.ts, verdict.ts (basic), routes/*, QueuePage, CasePage | Tests: ticket matching, basic verdict, unlock refused for ATTACK (403). On deploy: unlock a fumble case via SMS code from the outbox; account shows ACTIVE in `/audit` | 25 | |
+| S2 | W0 | Agent sees the queue of locked accounts from tickets, opens a case with the attempts and a basic verdict, verifies by SMS and unlocks with a reason; an ATTACK case cannot be unlocked | S1 | adminApi.ts, tickets.ts, verdict.ts (basic), routes/*, QueuePage, CasePage | Tests: ticket matching, basic verdict, unlock refused for ATTACK (403). On deploy: unlock a fumble case via SMS code from the outbox; account shows ACTIVE in `/audit` | 25 | ✓ |
 | S3 | W1 | Verdicts are trustworthy on messy data: attempts sorted by real time (mixed date formats), all policy signals (untrusted device, foreign country, liveness fail) shown as plain-English reasons | S2 | normalize.ts, verdict.ts + tests (server only) | Unit tests per signal and per date format green; 3 known attack accounts and 3 camera accounts get the right verdict on deploy | 20 | |
 | S4 | W1 | Agent copies a ready-made customer message: "how to avoid it" tips for a fumble, "we are protecting your account" for an attack | S2 | web/src/lib/messages.ts, components/CustomerMessage.tsx, CasePage mount (web only) | Unit test for both messages; copy button puts the text on the clipboard on the deployed app | 15 | |
 | S5 | W2 | Agent picks a verification allowed for the ticket's channel: SMS for phone/chat, or records a video call / branch visit for any channel | S3 | routes/unlock.ts, components/VerifyPanel.tsx | Tests: SMS refused for email-only case, VIDEO_CALL accepted; on deploy an email-ticket case unlocks with BRANCH and a reason | 15 | |

@@ -17,3 +17,49 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export type Health = { status: 'UP'; adminApi: 'UP' | 'DOWN' }
+
+export type Risk = 'ATTACK' | 'FUMBLE'
+
+export type CaseSummary = {
+  accountId: string
+  name: string
+  lockedAt: string | null
+  waitingSince: string
+  channels: string[]
+  ticketCount: number
+  risk: Risk
+}
+
+export type Ticket = { ticketId: string; createdAt: string; channel: string; status: string; text: string }
+
+export type Attempt = {
+  attemptId: string
+  timestamp: string
+  deviceModel: string
+  deviceTrusted: boolean
+  appVersion: string
+  country: string
+  livenessScore: string
+  matchScore: string
+  result: string
+  failReason: string
+}
+
+export type CaseDetail = {
+  account: {
+    accountId: string
+    fullName: string
+    country: string
+    status: 'LOCKED' | 'ACTIVE'
+    lockedAt: string | null
+    registeredPhone: string
+    lastAppVersion: string
+  }
+  tickets: Ticket[]
+  attempts: Attempt[]
+  verdict: { kind: Risk; reasons: string[] }
+  allowedVerifications: string[]
+}
+
+export const formatTime = (iso: string | null) =>
+  iso ? new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : '–'
