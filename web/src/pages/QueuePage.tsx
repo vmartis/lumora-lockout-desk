@@ -11,7 +11,7 @@ import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle }
 import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { api, formatTime, type CaseSummary } from '@/lib/api'
-import { filterByName } from '@/lib/filter'
+import { filterCases, toAccountId } from '@/lib/filter'
 import { summarize, waitingFor } from '@/lib/queue'
 import { cn } from '@/lib/utils'
 
@@ -49,7 +49,7 @@ export function QueuePage() {
   const [params, setParams] = useSearchParams()
   const query = params.get('q') ?? ''
   const setQuery = (q: string) => setParams(q ? { q } : {}, { replace: true })
-  const visible = data ? filterByName(data, query) : []
+  const visible = data ? filterCases(data, query) : []
 
   return (
     <Card>
@@ -98,8 +98,8 @@ export function QueuePage() {
                 type="search"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Filter by customer name"
-                aria-label="Filter by customer name"
+                placeholder="Filter by name or customer number"
+                aria-label="Filter by name or customer number"
                 maxLength={100}
                 className="pl-8"
               />
@@ -115,6 +115,19 @@ export function QueuePage() {
           <div className="flex flex-col items-center gap-2 py-10 text-center text-muted-foreground">
             <Search className="size-8" aria-hidden />
             <p>No locked customer matches “{query.trim()}”.</p>
+            {toAccountId(query) && (
+              <>
+                <p className="max-w-md text-sm">
+                  Not in the queue: either the account is no longer locked, or the customer has no open lockout ticket.
+                </p>
+                <Button
+                  size="sm"
+                  onClick={() => navigate(`/cases/${toAccountId(query)}`, { state: { queueSearch: params.toString() } })}
+                >
+                  Open case {toAccountId(query)}
+                </Button>
+              </>
+            )}
             <Button variant="outline" size="sm" onClick={() => setQuery('')}>
               <X aria-hidden /> Clear filter
             </Button>
