@@ -44,6 +44,11 @@ export function CasePage() {
                 {data.account.fullName}
                 <span className="text-sm font-normal text-muted-foreground">{data.account.accountId}</span>
                 <Badge variant={data.account.status === 'LOCKED' ? 'outline' : 'secondary'}>{data.account.status}</Badge>
+                {data.appUpdate && (
+                  <Badge variant="outline" className="border-amber-500 text-amber-700">
+                    App out of date: {data.appUpdate.current} (latest {data.appUpdate.latest})
+                  </Badge>
+                )}
               </CardTitle>
               <CardDescription>
                 Lives in {data.account.country} · phone {data.account.registeredPhone} · app {data.account.lastAppVersion}

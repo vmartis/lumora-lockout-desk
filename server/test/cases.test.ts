@@ -85,6 +85,7 @@ describe("GET /api/cases/:accountId", () => {
     expect(body.attempts[0]).toMatchObject({ deviceTrusted: true, failReason: "NO_FACE_DETECTED" });
     expect(body.attempts[0]).not.toHaveProperty("device_id");
     expect(body.verdict.kind).toBe("FUMBLE");
+    expect(body.appUpdate).toEqual({ current: "4.2.0", latest: "4.3.1" });
   });
 
   it("returns attempts newest first by real time, with ISO UTC timestamps, unparseable last", async () => {

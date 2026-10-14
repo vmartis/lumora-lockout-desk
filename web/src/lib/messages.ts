@@ -32,7 +32,15 @@ export function customerMessage(detail: CaseDetail): string {
   const camera = reasons.has('NO_FACE_DETECTED') || reasons.has('POOR_LIGHT')
   const match = reasons.has('LOW_MATCH')
   // Policy rule 4 tips are the default when the fail reason is unknown.
-  const tips = [...(camera || !match ? CAMERA_TIPS : []), ...(match ? MATCH_TIPS : []), UPDATE_TIP]
+  const update = detail.appUpdate
+    ? [`Update the Lumora app first: you have version ${detail.appUpdate.current}, the latest is ${detail.appUpdate.latest}. The new version works more reliably.`]
+    : []
+  const tips = [
+    ...update,
+    ...(camera || !match ? CAMERA_TIPS : []),
+    ...(match ? MATCH_TIPS : []),
+    ...(update.length ? [] : [UPDATE_TIP]),
+  ]
 
   const status =
     detail.account.status === 'ACTIVE'

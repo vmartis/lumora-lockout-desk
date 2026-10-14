@@ -16,7 +16,12 @@ const attempt = (over: Partial<Attempt>): Attempt => ({
   ...over,
 })
 
-type Over = { status?: 'LOCKED' | 'ACTIVE'; attempts?: Attempt[]; verdict?: CaseDetail['verdict'] }
+type Over = {
+  status?: 'LOCKED' | 'ACTIVE'
+  attempts?: Attempt[]
+  verdict?: CaseDetail['verdict']
+  appUpdate?: CaseDetail['appUpdate']
+}
 
 const detail = (over: Over = {}): CaseDetail => ({
   account: {
@@ -32,6 +37,7 @@ const detail = (over: Over = {}): CaseDetail => ({
   attempts: over.attempts ?? [attempt({}), attempt({ attemptId: 'A2', failReason: 'POOR_LIGHT' })],
   verdict: over.verdict ?? { kind: 'FUMBLE', reasons: ['5 failed attempts'] },
   allowedVerifications: ['SMS_CHALLENGE'],
+  appUpdate: over.appUpdate ?? null,
 })
 
 describe('customerMessage – fumble', () => {
@@ -110,5 +116,27 @@ describe('customerMessage – attack', () => {
     const msg = customerMessage(attack)
     expect(msg).not.toMatch(/unlock/i)
     expect(msg).not.toMatch(/eye level/i)
+  })
+})
+
+describe('customerMessage – outdated app (N1)', () => {
+  const outdated = { current: '4.2.0', latest: '4.3.1' }
+
+  it('puts the update tip first and names both versions', () => {
+    const msg = customerMessage(detail({ appUpdate: outdated }))
+    const tips = msg.split('\n').filter((l) => l.startsWith('- '))
+    expect(tips[0]).toMatch(/4\.2\.0/)
+    expect(tips[0]).toMatch(/4\.3\.1/)
+  })
+
+  it('keeps the generic update tip last when the app is current', () => {
+    const tips = customerMessage(detail()).split('\n').filter((l) => l.startsWith('- '))
+    expect(tips[tips.length - 1]).toMatch(/update the lumora app/i)
+    expect(tips.join(' ')).not.toMatch(/4\.2\.0/)
+  })
+
+  it('never mentions versions in an attack message', () => {
+    const msg = customerMessage(detail({ appUpdate: outdated, verdict: { kind: 'ATTACK', reasons: ['x'] } }))
+    expect(msg).not.toMatch(/4\.2\.0|update/i)
   })
 })

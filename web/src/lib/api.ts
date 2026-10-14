@@ -59,6 +59,8 @@ export type CaseDetail = {
   attempts: Attempt[]
   verdict: { kind: Risk; reasons: string[] }
   allowedVerifications: string[]
+  /** Set when the customer's app is older than the latest release (failures on 4.2.0 are much higher). */
+  appUpdate: { current: string; latest: string } | null
 }
 
 export const formatTime = (iso: string | null) =>

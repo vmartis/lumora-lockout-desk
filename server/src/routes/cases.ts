@@ -1,4 +1,5 @@
 import type { FastifyInstance } from "fastify";
+import { appUpdate } from "../appVersion.js";
 import type { CaseStore } from "../cases.js";
 import { allowedVerifications } from "../verification.js";
 
@@ -42,6 +43,7 @@ export function caseRoutes(app: FastifyInstance, store: CaseStore) {
       })),
       verdict,
       allowedVerifications: allowedVerifications(verdict, store.ticketsFor(accountId)),
+      appUpdate: appUpdate(account.lastAppVersion),
     };
   });
 }
