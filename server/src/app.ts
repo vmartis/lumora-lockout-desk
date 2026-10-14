@@ -28,7 +28,7 @@ export function buildApp({ adminApi, tickets = [], staticDir, logStream }: AppDe
     logger: logging ? { serializers: logSerializers, ...(logStream ? { stream: logStream } : {}) } : false,
     bodyLimit: 16 * 1024,
     // Reject unknown fields instead of silently dropping them.
-    ajv: { customOptions: { removeAdditional: false } },
+    ajv: { customOptions: { removeAdditional: false, coerceTypes: false } },
   });
 
   app.register(fastifyHelmet, {

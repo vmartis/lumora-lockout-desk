@@ -52,7 +52,7 @@ export function QueuePage() {
         {counts && counts.total > 0 && (
           <div className="flex flex-wrap gap-1.5 pt-1" aria-label="Queue summary">
             <Badge variant="secondary">{counts.total} waiting</Badge>
-            <Badge variant="destructive">{counts.attacks} {counts.attacks === 1 ? 'attack' : 'attacks'}</Badge>
+            <Badge variant={counts.attacks > 0 ? 'destructive' : 'outline'}>{counts.attacks} {counts.attacks === 1 ? 'attack' : 'attacks'}</Badge>
             <Badge variant="outline">{counts.camera} camera</Badge>
           </div>
         )}

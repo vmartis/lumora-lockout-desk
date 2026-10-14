@@ -24,13 +24,17 @@ const unlockBody = {
 } as const;
 
 const SMS_COOLDOWN_MS = 30_000;
+const CHALLENGE_TTL_MS = 10 * 60_000;
 
 export function unlockRoutes(app: FastifyInstance, adminApi: AdminApi, store: CaseStore) {
-  const challengeOwner = new Map<string, string>(); // challengeId -> accountId, only for challenges started here
+  // challengeId -> who it was started for and when; only challenges started here, used at most once, valid 10 minutes
+  const challengeOwner = new Map<string, { accountId: string; at: number }>();
   const lastSms = new Map<string, number>();
 
-  const notMine = (challengeId: string | undefined, accountId: string) =>
-    !challengeId || challengeOwner.get(challengeId) !== accountId;
+  const notMine = (challengeId: string | undefined, accountId: string) => {
+      const c = challengeId ? challengeOwner.get(challengeId) : undefined;
+      return !c || c.accountId !== accountId || Date.now() - c.at > CHALLENGE_TTL_MS;
+    };
 
   app.post<{ Params: { accountId: string } }>(
     "/api/cases/:accountId/sms",
@@ -51,7 +55,7 @@ export function unlockRoutes(app: FastifyInstance, adminApi: AdminApi, store: Ca
       }
       lastSms.set(accountId, Date.now());
       const { challengeId } = await adminApi.startSms(accountId);
-      challengeOwner.set(challengeId, accountId);
+      challengeOwner.set(challengeId, { accountId, at: Date.now() });
       return reply.code(201).send({ challengeId });
     },
   );
@@ -99,6 +103,7 @@ export function unlockRoutes(app: FastifyInstance, adminApi: AdminApi, store: Ca
         request = { agentId, verification, reason }; // video call / branch: the agent records it, no challenge
       }
       const account = await adminApi.unlock(accountId, request);
+      if (request.challengeId) challengeOwner.delete(request.challengeId); // one challenge, one unlock
       store.forget(accountId);
       return { accountId: account.accountId, status: account.status };
     },

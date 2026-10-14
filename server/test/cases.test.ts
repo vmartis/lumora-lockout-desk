@@ -397,3 +397,37 @@ describe("error mapping", () => {
     expect(res.json().error).toMatch(/not reachable/);
   });
 });
+
+describe("hardening (security review W2)", () => {
+  it("a used SMS challenge cannot unlock the account a second time", async () => {
+    const api = fakeApi();
+    const a = await withChallenge(api);
+    expect((await a.inject({ method: "POST", url: "/api/cases/LB-000001/unlock", payload: validUnlock })).statusCode).toBe(200);
+    const again = await a.inject({ method: "POST", url: "/api/cases/LB-000001/unlock", payload: validUnlock });
+    expect(again.statusCode).toBe(404);
+    expect(api.unlock).toHaveBeenCalledTimes(1);
+  });
+
+  it("an SMS challenge expires after 10 minutes", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] }); // only the clock; Fastify's inject needs real timers
+    try {
+      const api = fakeApi();
+      const a = await withChallenge(api);
+      vi.setSystemTime(Date.now() + 10 * 60_000 + 1);
+      const res = await a.inject({ method: "POST", url: "/api/cases/LB-000001/unlock", payload: validUnlock });
+      expect(res.statusCode).toBe(404);
+      expect(api.unlock).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("does not coerce JSON types (a number is not a reason, an array is not a method)", async () => {
+    const api = fakeApi();
+    const a = await withChallenge(api);
+    for (const payload of [{ ...validUnlock, reason: 123456 }, { ...validUnlock, verification: ["SMS_CHALLENGE"] }]) {
+      expect((await a.inject({ method: "POST", url: "/api/cases/LB-000001/unlock", payload })).statusCode).toBe(400);
+    }
+    expect(api.unlock).not.toHaveBeenCalled();
+  });
+});

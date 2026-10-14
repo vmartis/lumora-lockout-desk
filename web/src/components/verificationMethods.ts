@@ -29,7 +29,7 @@ const METHODS: MethodOption[] = [
   },
 ]
 
-export const SMS_NOT_ALLOWED_NOTE = 'Customer wrote by email: SMS codes are only for phone or chat'
+export const SMS_NOT_ALLOWED_NOTE = 'Customer did not contact us by phone or chat: SMS codes are only for those channels'
 
 export const methodOptions = (allowed: string[]): MethodOption[] => METHODS.filter((m) => allowed.includes(m.value))
 

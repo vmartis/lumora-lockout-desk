@@ -26,7 +26,7 @@ describe('methodOptions', () => {
   })
 
   it('explains why SMS is missing', () => {
-    expect(SMS_NOT_ALLOWED_NOTE).toBe('Customer wrote by email: SMS codes are only for phone or chat')
+    expect(SMS_NOT_ALLOWED_NOTE).toBe('Customer did not contact us by phone or chat: SMS codes are only for those channels')
   })
 })
 

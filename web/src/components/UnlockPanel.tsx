@@ -32,7 +32,9 @@ export function UnlockPanel({
   const queryClient = useQueryClient()
   const { agentId, isValid: agentOk } = useAgentId()
   const options = methodOptions(allowedVerifications)
-  const [method, setMethod] = useState<Verification | null>(options[0]?.value ?? null)
+  const [picked, setMethod] = useState<Verification | null>(options[0]?.value ?? null)
+  // If the allowed methods change after a refetch, fall back to the first one still offered.
+  const method = options.some((o) => o.value === picked) ? picked : (options[0]?.value ?? null)
   const [confirmed, setConfirmed] = useState(false)
   const [challengeId, setChallengeId] = useState<string | null>(null)
   const [verified, setVerified] = useState(false)
